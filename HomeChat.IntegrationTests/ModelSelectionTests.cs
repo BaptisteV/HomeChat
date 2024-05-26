@@ -1,6 +1,5 @@
 ﻿using HomeChat.Backend.AIModels;
 using Microsoft.AspNetCore.Mvc.Testing;
-using Newtonsoft.Json;
 using System.Net;
 using System.Net.Http.Json;
 
@@ -35,7 +34,7 @@ public class ModelSelectionTests : IClassFixture<WebApplicationFactory<Program>>
         var modelsBefore = await modelsResponseBefore.Content.ReadFromJsonAsync<List<ModelDescription>>();
         var newModelName = modelsBefore.First(m => !m.Selected).ShortName;
         var response = await _client.PostAsync($"/models", JsonContent.Create(new ModelChange(newModelName)));
-        Assert.Equal(HttpStatusCode.OK , response.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         var modelsResponseAfter = await _client.GetAsync($"/models");
         Assert.Equal(HttpStatusCode.OK, modelsResponseAfter.StatusCode);

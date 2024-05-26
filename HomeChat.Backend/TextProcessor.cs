@@ -6,7 +6,6 @@ namespace HomeChat.Backend;
 public interface ITextProcessor
 {
     void Start();
-    //Task<string> Process(string prompt, Action<string> onNewText, Func<string, Task<bool>> emitText);
     Task Process(string prompt, int maxTokens, Func<string, Task> onNewText, CancellationToken cancellationToken);
 }
 
@@ -39,35 +38,7 @@ public class TextProcessor : ITextProcessor, IAsyncDisposable
         _session = new ChatSession(_executor);
         Started = true;
     }
-    /*
-    public async Task<string> Process(string prompt, Action<string> onNewText, Func<string, Task<bool>> emitText)
-    {
-        var inferenceParams = new InferenceParams()
-        {
-            Temperature = 0.6f,
-            MaxTokens = 200,
-            RepeatLastTokensCount = -1,
-            RepeatPenalty = 1.2f,
-            //AntiPrompts = ["System: "],
-        };
-        var chats = _session.ChatAsync(prompt, inferenceParams);
-
-        var nextSpeech = "";
-        var result = new StringBuilder();
-        await foreach (var text in chats)
-        {
-            if (await emitText(nextSpeech))
-            {
-                onNewText(nextSpeech);
-                nextSpeech = "";
-            }
-            nextSpeech += text;
-
-            result.Append(text);
-        }
-        return result.ToString();
-    }*/
-    public async Task Process(string prompt,int maxTokens, Func<string, Task> onNewText, CancellationToken cancellationToken)
+    public async Task Process(string prompt, int maxTokens, Func<string, Task> onNewText, CancellationToken cancellationToken)
     {
         var inferenceParams = new InferenceParams()
         {
@@ -75,12 +46,10 @@ public class TextProcessor : ITextProcessor, IAsyncDisposable
             MaxTokens = maxTokens,
             RepeatLastTokensCount = -1,
             RepeatPenalty = 1.2f,
-            
-            //AntiPrompts = ["System: "],
         };
         var message = new ChatHistory.Message(AuthorRole.User, prompt);
         var chats = _session.ChatAsync(message, inferenceParams);
-        
+
         await foreach (var text in chats)
         {
             if (cancellationToken.IsCancellationRequested)
@@ -88,7 +57,7 @@ public class TextProcessor : ITextProcessor, IAsyncDisposable
                 Start();
                 return;
             }
-                
+
             await onNewText(text);
         }
     }

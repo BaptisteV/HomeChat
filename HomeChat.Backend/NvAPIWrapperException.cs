@@ -1,24 +1,23 @@
 ﻿using System.Runtime.Serialization;
 
-namespace HomeChat.Backend
+namespace HomeChat.Backend;
+
+[Serializable]
+internal class NvAPIWrapperException : Exception
 {
-    [Serializable]
-    internal class NvAPIWrapperException : Exception
+    public NvAPIWrapperException()
     {
-        public NvAPIWrapperException()
-        {
-        }
+    }
 
-        public NvAPIWrapperException(string? message) : base(message)
-        {
-        }
+    public NvAPIWrapperException(string? message) : base(message)
+    {
+    }
 
-        public NvAPIWrapperException(string? message, Exception? innerException) : base(message, innerException)
-        {
-        }
+    public NvAPIWrapperException(string? message, Exception? innerException) : base(message, innerException)
+    {
+    }
 
-        protected NvAPIWrapperException(SerializationInfo info, StreamingContext context) : base(info, context)
-        {
-        }
+    protected NvAPIWrapperException(SerializationInfo info, StreamingContext context) : base(info, context)
+    {
     }
 }

@@ -1,10 +1,10 @@
-﻿using System.Diagnostics;
+﻿using NvAPIWrapper.GPU;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
-using NvAPIWrapper.GPU;
 namespace HomeChat.Backend;
 
 
-public class PerformanceMonitor: IPerformanceMonitor
+public class PerformanceMonitor : IPerformanceMonitor
 {
     private readonly ILogger<PerformanceMonitor> _logger;
 

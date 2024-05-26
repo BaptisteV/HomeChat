@@ -1,5 +1,4 @@
-﻿using System.Data.SqlTypes;
-using System.Text;
+﻿using System.Text;
 
 namespace HomeChat.Backend;
 

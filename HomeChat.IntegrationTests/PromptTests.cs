@@ -4,10 +4,10 @@ using System.Net;
 
 namespace HomeChat.IntegrationTests;
 
-public class PromptTests: IClassFixture<WebApplicationFactory<Program>>
+public class PromptTests : IClassFixture<WebApplicationFactory<Program>>
 {
     private readonly WebApplicationFactory<Program> _factory;
-    private readonly HttpClient _client; 
+    private readonly HttpClient _client;
     public PromptTests(WebApplicationFactory<Program> factory)
     {
         _factory = factory;

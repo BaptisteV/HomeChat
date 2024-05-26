@@ -1,8 +1,5 @@
-﻿
-namespace HomeChat.Backend
+﻿namespace HomeChat.Backend;
+public interface IPerformanceMonitor
 {
-    public interface IPerformanceMonitor
-    {
-        Task<PerformanceSummary> GetPerformanceSummaryAsync();
-    }
+    Task<PerformanceSummary> GetPerformanceSummaryAsync();
 }

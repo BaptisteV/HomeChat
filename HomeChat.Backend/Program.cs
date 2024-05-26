@@ -101,7 +101,7 @@ app.MapPost("/models", async ([FromBody] ModelChange modelShortName, IModelColle
 
 async Task HandleHome(HttpContext httpContext)
 {
-    var html = await File.ReadAllTextAsync(@"C:\Users\Bapt\source\repos\HomeChat.Backend\wwwroot\index.html");
+    var html = await File.ReadAllTextAsync(@"./wwwroot/index.html");
     httpContext.Response.StatusCode = StatusCodes.Status200OK;
     httpContext.Response.ContentType = MediaTypeNames.Text.Html;
     httpContext.Response.ContentLength = Encoding.UTF8.GetByteCount(html);
