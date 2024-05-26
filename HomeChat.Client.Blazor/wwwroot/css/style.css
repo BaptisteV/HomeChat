@@ -1,0 +1,47 @@
+﻿.chat {
+    min-height: 1em;
+    border-radius: 4px;
+    box-shadow: 0px 0px 2px 4px rgba(0,0,0, 0.05);
+    padding-left: 0px;
+}
+
+.user {
+    background-color: lightsteelblue;
+    backdrop-filter: opacity(20%);
+    border-radius: 4px;
+    box-shadow: 1px 2px 2px 1px rgb(128, 128, 128, 0.4);
+}
+
+.bot {
+    border-radius: 4px;
+    background-color: lightgray;
+    backdrop-filter: opacity(20%);
+    box-shadow: 1px 2px 2px 1px rgb(128, 128, 128, 0.4);
+}
+
+body{
+    background-color: #002cff23;
+}
+
+
+.chatlog-container {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: stretch;
+    align-content: stretch;
+    width: 100%;
+    padding-top: 5%;
+    padding-bottom: 5%;
+    padding-left: 15%;
+    padding-right: 15%;
+}
+
+.param{
+    margin-top: 1em;
+    margin-bottom:1em;
+}
+
+.chatlog {
+    flex-grow: 1;
+}

@@ -1,0 +1,250 @@
+﻿@page "/prompt"
+@using System.Text
+@using HomeChat.Client.Http
+@using Toolbelt.Blazor.SpeechSynthesis
+@inject SpeechSynthesis SpeechSynthesis
+@inject HomeChatClient HomeChatClient
+@inject IHttpClientFactory ClientFactory
+<PageTitle>Prompt</PageTitle>
+<!--<PerfText></PerfText>-->
+<div class="chatlog-container">
+
+    <h1>Prompt</h1>
+    <div class="chatlog">
+
+        <ol style="list-style:none" class="chat">
+            @foreach (var chat in chatLog)
+            {
+                var strClass = chat.fromUser ? "user" : "bot";
+                <li class="@strClass"><span>@(chat.fromUser ? "😊" : "🤖")</span>@chat.message</li>
+                <li><p></p></li>
+            }
+        </ol>
+    </div>
+
+<textarea class="prompt-input" @bind="CurrentPrompt" @oninput="PromptChanged" />
+
+    <div class="param-container">
+        <label for="sayResponse">🔈Réponse</label>
+        <input id="sayResponse" class="param" type="checkbox" checked=@sayResponse />
+        <label for="sayResponse">🔈Prompt</label>
+        <input id="sayPrompt" class="param" type="checkbox" checked=@sayPrompt />
+        <button class="param btn btn-primary" @onclick="CancelSpeach">🔉🗙</button>
+
+        <label for="select-language">Langue : </label>
+        <select id="select-language" class="param param-combo" @bind="@language">
+            @foreach (var language in Languages)
+            {
+                <option value="@language">@language</option>
+            }
+        </select>
+        <label for="select-max">Taille max de la réponse : </label>
+        <select class="param-combo" @bind="@maxTokens">
+            @foreach (var max in MaxTokens)
+            {
+                <option value="@max">@max</option>
+            }
+        </select>
+    </div>
+
+    <button class="btn btn-primary" @onclick="DoPrompt">Click me</button>
+</div>
+@code {
+    public string CurrentPrompt { get; set; } = "Donne mes les paroles d'une chanson sur la mort et le diable.";
+    private bool sayResponse = true;
+    private bool sayPrompt = true;
+    private List<(bool fromUser, string message)> chatLog = new();
+    public string language = "fr";
+    private List<string> Languages = ["fr", "en"];
+
+    public int maxTokens = 50;
+    private List<int> MaxTokens = [50, 100, 200, 500, 1000, 10000];
+
+    IEnumerable<SpeechSynthesisVoice> Voices;
+    private WordAggregator agg = null;
+    protected async override Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await HomeChatClient.StartSession();
+            this.Voices = await SpeechSynthesis.GetVoicesAsync();
+            agg = new WordAggregator((t) =>
+            {
+                var utterancet = new SpeechSynthesisUtterance
+                    {
+                        Text = t,
+                        Voice = this.Voices.FirstOrDefault(v => v.Name.Contains("Microsoft Paul")),
+                        Lang = this.language,
+                        Rate = 1.2,
+                    };
+                this.SpeechSynthesis.SpeakAsync(utterancet);
+            });
+            agg.NewText(CurrentPrompt);
+            this.StateHasChanged();
+        }
+    }
+    private void PromptChanged(ChangeEventArgs e)
+    {
+        agg.NewText(e.Value.ToString().Last().ToString());
+    }
+    /*
+    private async Task DoPrompt()
+    {
+    var answer = "";
+    chatLog.Add((fromUser: true, message: CurrentPrompt));
+    chatLog.Add((fromUser: false, message: answer));
+
+    this.StateHasChanged();
+
+    await HomeChatClient.Prompt(CurrentPrompt, maxTokens,
+        (newText) =>
+        {
+        if (string.IsNullOrEmpty(newText))
+        return;
+    Console.WriteLine("Received : " + newText);
+    pendingResponse += newText;
+    var lastLog = chatLog.Last();
+    lastLog.message += newText;
+    chatLog.RemoveAt(chatLog.Count - 1);
+    chatLog.Add(lastLog);
+    this.StateHasChanged();
+    },
+    (newPhrase) =>
+    {
+    var utterancet = new SpeechSynthesisUtterance
+    {
+    Text = newPhrase,
+    Voice = this.Voices.FirstOrDefault(v => v.Name.Contains("Haruka")),
+    Lang = language,
+    Rate = 1.2,
+    };
+
+    Console.WriteLine("Saying : " + newPhrase);
+    SpeechSynthesis.SpeakAsync(utterancet);
+    });
+    pendingResponse = "";
+    this.StateHasChanged();
+    }*/
+
+    private async Task DoPrompt()
+    {
+        var answer = "";
+        chatLog.Add((fromUser: true, message: CurrentPrompt));
+        chatLog.Add((fromUser: false, message: answer));
+
+        this.StateHasChanged();
+        /*
+        var toto = HomeChatClient.PromptEnumerable(CurrentPrompt, maxTokens,
+        (newPhrase) =>
+        {
+        var utterancet = new SpeechSynthesisUtterance
+        {
+        Text = newPhrase,
+        Voice = this.Voices.FirstOrDefault(v => v.Name.Contains("Haruka")),
+        Lang = language,
+        Rate = 1.2,
+        };
+
+        Console.WriteLine("Saying : " + newPhrase);
+        SpeechSynthesis.SpeakAsync(utterancet);
+        },
+        (newChar) =>
+        {
+        var lastLog = chatLog.Last();
+        lastLog.message += newChar;
+        chatLog.RemoveAt(chatLog.Count - 1);
+        chatLog.Add(lastLog);
+        this.StateHasChanged();
+        });
+        await foreach(var result in toto)
+        {
+        if (string.IsNullOrEmpty(result))
+        return;
+        Console.WriteLine("Received : " + result);
+        var lastLog = chatLog.Last();
+        lastLog.message += result;
+        chatLog.RemoveAt(chatLog.Count - 1);
+        chatLog.Add(lastLog);
+        this.StateHasChanged();
+
+            }*/
+        /*
+        await HomeChatClient.Prompt(CurrentPrompt, maxTokens,
+        (newPhrase) =>
+            {
+                var utterancet = new SpeechSynthesisUtterance
+    {
+    Text = newPhrase,
+    Voice = this.Voices.FirstOrDefault(v => v.Name.Contains("Haruka")),
+    Lang = language,
+    Rate = 1.2,
+        };
+
+        Console.WriteLine("Saying : " + newPhrase);
+    SpeechSynthesis.SpeakAsync(utterancet);
+        return Task.CompletedTask;
+        },
+        (newChar) =>
+        {
+        var lastLog = chatLog.Last();
+        lastLog.message += newChar;
+        chatLog.RemoveAt(chatLog.Count - 1);
+        chatLog.Add(lastLog);
+        this.StateHasChanged();
+    return Task.CompletedTask;
+         });
+         */
+
+        /*
+        await foreach (var newChar in HomeChatClient.PromptChars(CurrentPrompt, maxTokens))
+            {
+            var lastLog = chatLog.Last();
+            lastLog.message += newChar;
+            chatLog.RemoveAt(chatLog.Count - 1);
+            chatLog.Add(lastLog);
+            this.StateHasChanged();
+        }*/
+        /*
+        await HomeChatClient.PromptAllChars(CurrentPrompt, maxTokens, (newChar) =>
+        {
+            Console.Write(newChar);
+            var lastLog = chatLog.Last();
+            lastLog.message += newChar;
+            chatLog.RemoveAt(chatLog.Count - 1);
+            chatLog.Add(lastLog);
+            return Task.CompletedTask;
+        });
+        */
+        var toto = HomeChatClient.PromptEnumerable(CurrentPrompt, maxTokens,
+            async (newPhrase) =>
+            {
+                var utterancet = new SpeechSynthesisUtterance
+                    {
+                        Text = newPhrase,
+                        Voice = this.Voices.FirstOrDefault(v => v.Name.Contains("Haruka")),
+                        Lang = language,
+                        Rate = 1.2,
+                    };
+
+                Console.WriteLine("Saying : " + newPhrase);
+                await SpeechSynthesis.SpeakAsync(utterancet);
+            });
+
+        await foreach (var result in toto)
+        {
+            if (string.IsNullOrEmpty(result))
+                return;
+            Console.WriteLine("Received : " + result);
+            var lastLog = chatLog.Last();
+            lastLog.message += result;
+            chatLog.RemoveAt(chatLog.Count - 1);
+            chatLog.Add(lastLog);
+            this.StateHasChanged();
+        }
+        this.StateHasChanged();
+    }
+    private async Task CancelSpeach()
+    {
+        await SpeechSynthesis.CancelAsync();
+    }
+}

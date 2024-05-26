@@ -1,0 +1,1 @@
+export default { name: "newtext", event: new CustomEvent("newtext", { detail: null }) };

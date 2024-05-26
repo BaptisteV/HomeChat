@@ -1,0 +1,29 @@
+﻿@using System.Text
+@using HomeChat.Client.Http
+@inject HomeChatClient HomeChatClient
+
+<h3>PerfText</h3>
+<p style="white-space: pre-line; font-family:'Consolas'">@GraphString</p>
+@code {
+    private readonly TimeSpan _refreshInterval = TimeSpan.FromMilliseconds(250);
+    private string GraphString = "";
+
+    public async Task FetchGraph()
+    {
+        GraphString = await HomeChatClient.PerfGraph2();
+        this.StateHasChanged();
+    }
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        Task.Run(async () =>
+           {
+               while (true)
+               {
+                   await FetchGraph();
+                   await Task.Delay(_refreshInterval);
+               }
+           });
+    }
+}

@@ -1,0 +1,29 @@
+﻿using Microsoft.AspNetCore.Mvc.Testing;
+using System.Net;
+
+namespace HomeChat.IntegrationTests;
+
+public class WebTests : IClassFixture<WebApplicationFactory<Program>>
+{
+    private readonly WebApplicationFactory<Program> _factory;
+    private readonly HttpClient _client;
+    public WebTests(WebApplicationFactory<Program> factory)
+    {
+        _factory = factory;
+        _client = _factory.CreateClient();
+    }
+
+    [Fact]
+    public async Task Test1()
+    {
+        var response = await _client.GetAsync($"/Home");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Test2()
+    {
+        var response = await _client.GetAsync($"/Settings");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+}

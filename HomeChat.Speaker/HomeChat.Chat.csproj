@@ -1,0 +1,21 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+	<InvariantGlobalization>false</InvariantGlobalization>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="LLamaSharp" Version="0.8.1" />
+    <PackageReference Include="LLamaSharp.Backend.Cuda11" Version="0.8.1" />
+    <PackageReference Include="System.Speech" Version="8.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\HomeChat.Client.Http\HomeChat.Client.Http.csproj" />
+    <ProjectReference Include="..\HomeChat.Common\HomeChat.Common.csproj" />
+  </ItemGroup>
+
+</Project>
