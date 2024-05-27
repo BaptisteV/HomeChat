@@ -1,43 +1,41 @@
-﻿using LLama;
+﻿using HomeChat.Backend.AIModels;
+using LLama;
 using LLama.Common;
 
 namespace HomeChat.Backend;
 
 public interface ITextProcessor
 {
-    void Start();
+    Task LoadSelectedModel();
     Task Process(string prompt, int maxTokens, Func<string, Task> onNewText, CancellationToken cancellationToken);
 }
 
-public class TextProcessor : ITextProcessor, IAsyncDisposable
+public class TextProcessor(IModelCollection _modelCollection) : ITextProcessor, IAsyncDisposable
 {
-    private readonly ModelParams _parameters;
+    private LLamaWeights? _model;
+    private ChatSession? _session;
+    private LLamaContext? _context;
 
-    private readonly LLamaWeights _model;
-    private ChatSession _session;
-    private LLamaContext _context;
-    private InteractiveExecutor _executor;
     public bool Started { get; private set; } = false;
-    public TextProcessor(string modelPath)
+
+    public async Task LoadSelectedModel()
     {
         var rand = new Random();
-        _parameters = new ModelParams(modelPath)
+        var parameters = new ModelParams((await _modelCollection.GetSelectedModel()).Filename)
         {
             ContextSize = 1024,
-            Seed = (uint)(rand.Next(1 << 30)) << 2 | (uint)(rand.Next(1 << 2)),
+            Seed = (uint)rand.Next(1 << 30) << 2 | (uint)rand.Next(1 << 2),
             GpuLayerCount = 35,
         };
-        _model = LLamaWeights.LoadFromFile(_parameters);
-    }
+        _model = await LLamaWeights.LoadFromFileAsync(parameters);
 
-    public void Start()
-    {
         // Initialize a chat session
-        _context = _model.CreateContext(_parameters);
-        _executor = new InteractiveExecutor(_context);
-        _session = new ChatSession(_executor);
+        _context = _model.CreateContext(parameters);
+        var executor = new InteractiveExecutor(_context);
+        _session = new ChatSession(executor);
         Started = true;
     }
+
     public async Task Process(string prompt, int maxTokens, Func<string, Task> onNewText, CancellationToken cancellationToken)
     {
         var inferenceParams = new InferenceParams()
@@ -47,14 +45,16 @@ public class TextProcessor : ITextProcessor, IAsyncDisposable
             RepeatLastTokensCount = -1,
             RepeatPenalty = 1.2f,
         };
+
         var message = new ChatHistory.Message(AuthorRole.User, prompt);
-        var chats = _session.ChatAsync(message, inferenceParams);
+        if (_session is null)
+            await LoadSelectedModel();
+        var chats = _session!.ChatAsync(message, inferenceParams, cancellationToken);
 
         await foreach (var text in chats)
         {
             if (cancellationToken.IsCancellationRequested)
             {
-                Start();
                 return;
             }
 
@@ -66,6 +66,7 @@ public class TextProcessor : ITextProcessor, IAsyncDisposable
     {
         _context?.Dispose();
         _model?.Dispose();
+        GC.SuppressFinalize(this);
         return ValueTask.CompletedTask;
     }
 }

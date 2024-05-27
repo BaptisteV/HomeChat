@@ -6,5 +6,5 @@ public record ModelDescription
     public required string ShortName { get; init; }
     public required string Description { get; init; }
     public required long SizeInMb { get; init; }
-    public required bool Selected { get; set; }
+    public required bool IsSelected { get; set; }
 }

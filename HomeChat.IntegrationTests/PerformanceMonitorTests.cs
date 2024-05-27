@@ -1,4 +1,4 @@
-﻿using HomeChat.Backend;
+﻿using HomeChat.Backend.Performances;
 using Microsoft.AspNetCore.Mvc.Testing;
 using System.Net;
 using System.Net.Http.Json;

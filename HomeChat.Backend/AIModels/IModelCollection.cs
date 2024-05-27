@@ -2,6 +2,7 @@
 
 public interface IModelCollection
 {
-    ModelDescription SelectModel(string modelShortName);
+    void SelectModel(string modelShortName);
     Task<List<ModelDescription>> GetModels();
+    Task<ModelDescription> GetSelectedModel();
 }

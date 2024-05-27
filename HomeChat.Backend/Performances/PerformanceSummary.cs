@@ -1,7 +1,7 @@
 ﻿using NvAPIWrapper.GPU;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
-namespace HomeChat.Backend;
+namespace HomeChat.Backend.Performances;
 
 
 public class PerformanceMonitor : IPerformanceMonitor
@@ -61,7 +61,7 @@ public class PerformanceMonitor : IPerformanceMonitor
         {
             _logger.LogError($"Failed to get RAM usage: {ex.Message}");
         }
-        catch (NvAPIWrapperException ex)
+        catch (NvApiException ex)
         {
             _logger.LogError($"Failed to get GPU usage: {ex.Message}");
         }
@@ -87,7 +87,7 @@ public class PerformanceMonitor : IPerformanceMonitor
 
         var availableRAM = memStatus.ullAvailPhys / (1024 * 1024);
         var totalRAM = memStatus.ullTotalPhys / (1024 * 1024);
-        var ramUsage = 100 - ((double)availableRAM / totalRAM * 100);
+        var ramUsage = 100 - (double)availableRAM / totalRAM * 100;
         return (int)ramUsage;
     }
 

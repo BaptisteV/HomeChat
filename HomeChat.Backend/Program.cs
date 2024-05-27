@@ -1,5 +1,6 @@
 using HomeChat.Backend;
 using HomeChat.Backend.AIModels;
+using HomeChat.Backend.Performances;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using NReco.Logging.File;
@@ -23,24 +24,12 @@ builder.Services.AddLogging(builder
 ));
 builder.Services.AddSingleton<IModelCollection>(new ModelCollection());
 builder.Services.AddSingleton<IPerformanceMonitor, PerformanceMonitor>();
+builder.Services.AddSingleton<ITextProcessor, TextProcessor>();
 
-/*builder.Services.AddCors(options =>
-{
-    options.AddPolicy("CorsPolicy",
-        builder => builder.AllowAnyMethod()
-                .AllowAnyOrigin()
-                .AllowAnyHeader()
-                .SetIsOriginAllowed(origin => true)
-                .WithMethods("GET, PATCH, DELETE, PUT, POST, OPTIONS"));
-});*/
 var app = builder.Build();
-//app.UseCors("CorsPolicy");
 
 app.UseStaticFiles();
 app.UseHttpsRedirection();
-var models = await app.Services.GetRequiredService<IModelCollection>().GetModels();
-var defaultModel = models.Single(m => m.Selected);
-var staticTextProcessor = new TextProcessor(defaultModel.Filename);
 
 app.MapGet("/", HandleHome);
 app.MapGet("/Home", HandleHome);
@@ -51,6 +40,7 @@ app.MapGet("PerformanceSummary", async (IPerformanceMonitor performanceMonitor)
     => await performanceMonitor.GetPerformanceSummaryAsync());
 
 async Task<EmptyHttpResult> HandlePrompt(
+    ITextProcessor textProcessor,
     HttpContext context,
     CancellationToken cancellationToken,
     [FromQuery] string prompt,
@@ -59,10 +49,7 @@ async Task<EmptyHttpResult> HandlePrompt(
     //Console.WriteLine("/prompt Handling...");
     context.Response.Headers.Append("Content-Type", "text/event-stream");
 
-    if (!staticTextProcessor.Started)
-        staticTextProcessor.Start();
-
-    await staticTextProcessor.Process(
+    await textProcessor.Process(
         prompt,
         maxTokens,
         onNewText: async (text) =>
@@ -83,7 +70,7 @@ async Task<EmptyHttpResult> HandlePrompt(
     return TypedResults.Empty;
 }
 
-app.MapPost("/reset", () => staticTextProcessor.Start());
+app.MapPost("/reset", (ITextProcessor textProcessor) => textProcessor.LoadSelectedModel());
 
 app.MapGet("/models", (IModelCollection models) =>
 {
@@ -91,12 +78,10 @@ app.MapGet("/models", (IModelCollection models) =>
     return models.GetModels();
 });
 
-app.MapPost("/models", async ([FromBody] ModelChange modelShortName, IModelCollection models) =>
+app.MapPost("/models", async (ITextProcessor textProcessor, [FromBody] ModelChange modelShortName, IModelCollection models) =>
 {
-    var newModel = models.SelectModel(modelShortName.NewModelShortName);
-    await staticTextProcessor.DisposeAsync();
-    staticTextProcessor = new TextProcessor(newModel.Filename);
-    staticTextProcessor.Start();
+    models.SelectModel(modelShortName.NewModelShortName);
+    textProcessor.LoadSelectedModel();
 });
 
 async Task HandleHome(HttpContext httpContext)
