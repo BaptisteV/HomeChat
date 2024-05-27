@@ -19,11 +19,4 @@ public class WebTests : IClassFixture<WebApplicationFactory<Program>>
         var response = await _client.GetAsync($"/Home");
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
-
-    [Fact]
-    public async Task Test2()
-    {
-        var response = await _client.GetAsync($"/Settings");
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-    }
 }

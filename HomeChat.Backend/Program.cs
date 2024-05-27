@@ -22,7 +22,7 @@ builder.Services.AddLogging(builder
         };
     }
 ));
-builder.Services.AddSingleton<IModelCollection>(new ModelCollection());
+builder.Services.AddSingleton<IModelCollection, ModelCollection>();
 builder.Services.AddSingleton<IPerformanceMonitor, PerformanceMonitor>();
 builder.Services.AddSingleton<ITextProcessor, TextProcessor>();
 
@@ -34,19 +34,20 @@ app.UseHttpsRedirection();
 app.MapGet("/", HandleHome);
 app.MapGet("/Home", HandleHome);
 
-app.MapGet("/prompt", HandlePrompt);
+app.MapGet("/api/Prompt", HandlePrompt);
 
-app.MapGet("PerformanceSummary", async (IPerformanceMonitor performanceMonitor)
+app.MapGet("/api/PerformanceSummary", async ([FromServices] IPerformanceMonitor performanceMonitor)
     => await performanceMonitor.GetPerformanceSummaryAsync());
 
 async Task<EmptyHttpResult> HandlePrompt(
-    ITextProcessor textProcessor,
-    HttpContext context,
-    CancellationToken cancellationToken,
     [FromQuery] string prompt,
-    [FromQuery] int maxTokens = 50)
+    [FromQuery] int maxTokens,
+    [FromServices] ILogger<Program> logger,
+    [FromServices] ITextProcessor textProcessor,
+    HttpContext context,
+    CancellationToken cancellationToken)
 {
-    //Console.WriteLine("/prompt Handling...");
+    logger.LogInformation("Remote IP: {RemoteIpAdress} Prompt :{Prompt}", context.Connection.RemoteIpAddress, prompt);
     context.Response.Headers.Append("Content-Type", "text/event-stream");
 
     await textProcessor.Process(
@@ -54,7 +55,7 @@ async Task<EmptyHttpResult> HandlePrompt(
         maxTokens,
         onNewText: async (text) =>
         {
-            Console.Write(text);
+            logger.LogInformation("{Text}", text);
 
             await context.Response.WriteAsync("event: aiMessage\n");
             await context.Response.WriteAsync("data: ");
@@ -70,18 +71,17 @@ async Task<EmptyHttpResult> HandlePrompt(
     return TypedResults.Empty;
 }
 
-app.MapPost("/reset", (ITextProcessor textProcessor) => textProcessor.LoadSelectedModel());
+app.MapPost("/api/Reset", (ITextProcessor textProcessor) => textProcessor.LoadSelectedModel());
 
-app.MapGet("/models", (IModelCollection models) =>
-{
-    Console.WriteLine("Retrieving models...");
-    return models.GetModels();
-});
-
-app.MapPost("/models", async (ITextProcessor textProcessor, [FromBody] ModelChange modelShortName, IModelCollection models) =>
+app.MapPost("/api/Models", async ([FromBody] ModelChange modelShortName, [FromServices] ITextProcessor textProcessor, [FromServices] IModelCollection models) =>
 {
     models.SelectModel(modelShortName.NewModelShortName);
-    textProcessor.LoadSelectedModel();
+    await textProcessor.LoadSelectedModel();
+});
+
+app.MapGet("/api/Models", async ([FromServices] IModelCollection models) =>
+{
+    return await models.GetModels();
 });
 
 async Task HandleHome(HttpContext httpContext)
@@ -93,6 +93,6 @@ async Task HandleHome(HttpContext httpContext)
     await httpContext.Response.WriteAsync(html);
 }
 
-app.Run();
+await app.RunAsync();
 
 public partial class Program { protected Program() { } }

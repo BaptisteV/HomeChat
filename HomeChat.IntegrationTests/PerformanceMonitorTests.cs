@@ -16,7 +16,7 @@ public class PerformanceMonitorTests : IClassFixture<WebApplicationFactory<Progr
     [Fact]
     public async Task PerformanceSummaryReturnsCoherentValues()
     {
-        var response = await _client.GetAsync($"/PerformanceSummary");
+        var response = await _client.GetAsync($"/api/PerformanceSummary");
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var result = await response.Content.ReadFromJsonAsync<PerformanceSummary>();
         Assert.NotNull(result);

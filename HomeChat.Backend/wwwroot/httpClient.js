@@ -1,6 +1,6 @@
 export default {
     GetModels: async function () {
-        const response = await fetch("/models", {
+        const response = await fetch("/api/Models", {
             method: "GET",
             headers: {
                 "Content-Type": "application/json",
@@ -12,7 +12,7 @@ export default {
         return models;
     },
     SetModel: async function (newModelShortName) {
-        const response = await fetch("/models", {
+        const response = await fetch("api/Models", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",

@@ -1,6 +1,7 @@
 ﻿using HomeChat.Backend.AIModels;
 using LLama;
 using LLama.Common;
+using System.Diagnostics.CodeAnalysis;
 
 namespace HomeChat.Backend;
 
@@ -12,28 +13,29 @@ public interface ITextProcessor
 
 public class TextProcessor(IModelCollection _modelCollection) : ITextProcessor, IAsyncDisposable
 {
-    private LLamaWeights? _model;
-    private ChatSession? _session;
-    private LLamaContext? _context;
+    private LLamaWeights _model;
+    private ChatSession _session;
+    private LLamaContext _context;
 
-    public bool Started { get; private set; } = false;
-
+    [MemberNotNull(nameof(_model))]
+    [MemberNotNull(nameof(_session))]
+    [MemberNotNull(nameof(_context))]
     public async Task LoadSelectedModel()
     {
         var rand = new Random();
-        var parameters = new ModelParams((await _modelCollection.GetSelectedModel()).Filename)
+        var modelFile = (await _modelCollection.GetSelectedModel()).Filename;
+        var parameters = new ModelParams(modelFile)
         {
             ContextSize = 1024,
             Seed = (uint)rand.Next(1 << 30) << 2 | (uint)rand.Next(1 << 2),
             GpuLayerCount = 35,
         };
-        _model = await LLamaWeights.LoadFromFileAsync(parameters);
+        _model = await LLamaWeights.LoadFromFileAsync(parameters)!;
 
         // Initialize a chat session
         _context = _model.CreateContext(parameters);
         var executor = new InteractiveExecutor(_context);
         _session = new ChatSession(executor);
-        Started = true;
     }
 
     public async Task Process(string prompt, int maxTokens, Func<string, Task> onNewText, CancellationToken cancellationToken)
@@ -46,9 +48,15 @@ public class TextProcessor(IModelCollection _modelCollection) : ITextProcessor, 
             RepeatPenalty = 1.2f,
         };
 
-        var message = new ChatHistory.Message(AuthorRole.User, prompt);
         if (_session is null)
             await LoadSelectedModel();
+
+        var message = new ChatHistory.Message(AuthorRole.User, prompt);
+
+        if (_session!.History.Messages.LastOrDefault()?.AuthorRole == AuthorRole.User)
+            return;
+
+
         var chats = _session!.ChatAsync(message, inferenceParams, cancellationToken);
 
         await foreach (var text in chats)

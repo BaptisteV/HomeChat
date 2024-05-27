@@ -24,10 +24,7 @@ async function showModels() {
             spinner.classList.remove("hidden");
             await httpClient.SetModel(model.shortName);
             spinner.classList.add("hidden");
-            /*
-            models = await httpClient.GetModels();
-            spinner.classList.add("hidden");
-            */
+
             await showModels();
         }
 

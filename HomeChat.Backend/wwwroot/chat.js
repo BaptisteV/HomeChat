@@ -1,7 +1,7 @@
 import newTextEvent from "./event.js"
 
 const aiEvent = "aiMessage";
-const url = "https://mygpt.freeboxos.fr:7228/prompt";
+const url = "https://mygpt.freeboxos.fr:7228/api/Prompt";
 
 let eventSource = null;
 function initEventSource(prompt, maxTokens) {

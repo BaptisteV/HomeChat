@@ -12,6 +12,7 @@
   <ItemGroup>
 	  <PackageReference Include="LLamaSharp" Version="0.12.0" />
 	  <PackageReference Include="LLamaSharp.Backend.Cuda12" Version="0.12.0" />
+	  <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.1" />
 	  <PackageReference Include="NReco.Logging.File" Version="1.2.0" />
 	  <PackageReference Include="NvAPIWrapper.Net" Version="0.8.1.101" />
 	  <PackageReference Include="System.CodeDom" Version="8.0.0" />
@@ -36,9 +37,6 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <Content Update="wwwroot\style.css">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Update="wwwroot\ui.js">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
   </ItemGroup>

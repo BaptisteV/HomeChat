@@ -46,27 +46,36 @@ public class PerformanceMonitor : IPerformanceMonitor
 
     public async Task<PerformanceSummary> GetPerformanceSummaryAsync()
     {
+        int cpuUsage = 0, ramUsage = 0, gpuUsage = 0;
+
         try
         {
-            var cpuUsage = await GetCpuUsageAsync();
-            var ramUsage = GetRamUsage();
-            var gpuUsage = GetGpuUsage();
-            return new PerformanceSummary(cpuUsage, gpuUsage, ramUsage);
+            cpuUsage = await GetCpuUsageAsync();
         }
-        catch (InvalidOperationException ex)
+        catch (CpuUsageException ex)
         {
-            _logger.LogError($"Failed to get CPU usage: {ex.Message}");
-        }
-        catch (UnauthorizedAccessException ex)
-        {
-            _logger.LogError($"Failed to get RAM usage: {ex.Message}");
-        }
-        catch (NvApiException ex)
-        {
-            _logger.LogError($"Failed to get GPU usage: {ex.Message}");
+            _logger.LogError(ex, "Failed to get CPU usage");
         }
 
-        return new PerformanceSummary(0, 0, 0);
+        try
+        {
+            ramUsage = GetRamUsage();
+        }
+        catch (RamUsageException ex)
+        {
+            _logger.LogError(ex, "Failed to get RAM usage");
+        }
+
+        try
+        {
+            gpuUsage = GetGpuUsage();
+        }
+        catch (GpuUsageException ex)
+        {
+            _logger.LogError(ex, "Failed to get GPU usage");
+        }
+
+        return new PerformanceSummary(cpuUsage, gpuUsage, ramUsage);
     }
 
     private async Task<int> GetCpuUsageAsync()

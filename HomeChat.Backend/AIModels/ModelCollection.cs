@@ -3,7 +3,12 @@
 public class ModelCollection : IModelCollection
 {
     private readonly string ModelRootSearchPath = @"C:\Users\Bapt\.cache\lm-studio\models";
-    private List<ModelDescription> _models = new();
+    private List<ModelDescription> _models = [];
+
+    public ModelCollection()
+    {
+        ScanForModels();
+    }
 
     public void SelectModel(string modelShortName)
     {
@@ -12,7 +17,7 @@ public class ModelCollection : IModelCollection
         model.IsSelected = true;
     }
 
-    private async Task ScanForModels()
+    private void ScanForModels()
     {
         if (!Directory.Exists(ModelRootSearchPath)) throw new DirectoryNotFoundException($"Folder {ModelRootSearchPath}' introuvable");
         var filenames = Directory.GetFiles(ModelRootSearchPath, "*.gguf", SearchOption.AllDirectories);
@@ -33,15 +38,17 @@ public class ModelCollection : IModelCollection
         _models.First(m => m.ShortName.Contains("Llama-3", StringComparison.CurrentCultureIgnoreCase)).IsSelected = true;
     }
 
-    public async Task<ModelDescription> GetSelectedModel()
+    public Task<ModelDescription> GetSelectedModel()
     {
         if (_models.Count == 0)
-            await ScanForModels();
-        return _models.Single(m => m.IsSelected);
+            ScanForModels();
+        return Task.FromResult(_models.Single(m => m.IsSelected));
     }
 
     public Task<List<ModelDescription>> GetModels()
     {
+        if (_models.Count == 0)
+            ScanForModels();
         return Task.FromResult(_models);
     }
 }
