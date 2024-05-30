@@ -15,6 +15,7 @@ function speak(detail) {
 };
 
 class PhraseBuffer {
+    splitters = ["\n", ".", ",", "?", "!", ":", ";"]
     data = "";
     onNewPhrase = (phrase) => speak(phrase);
 
@@ -29,7 +30,7 @@ class PhraseBuffer {
 
     addText(text) {
         this.data += text;
-        if (this.data.includes(".") || this.data.includes("\n") || this.data.length > 101) {
+        if (this.splitters.some(s => this.data.includes(s)) || this.data.length > 101) {
             this.onNewPhrase(this.data);
             this.flush();
         }
@@ -38,7 +39,6 @@ class PhraseBuffer {
 const phraseBuffer = new PhraseBuffer();
 
 window.addEventListener(newTextEvent.name, (newText) => {
-    console.log("speak from event: ", newText)
     if (newText.detail == null) {
         phraseBuffer.end();
         return;

@@ -12,16 +12,16 @@ export default {
         return models;
     },
     SetModel: async function (newModelShortName) {
-        const response = await fetch("api/Models", {
+        await fetch("api/Models", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
             },
-            body: JSON.stringify({ "newModelShortName": newModelShortName })
+            body: JSON.stringify({ "newModelShortName": newModelShortName }),
         });
     },
 
-    getPrompt: async function (prompt, maxTokens) {
+    GetPrompt: async function (prompt, maxTokens) {
         // TODO
     }
 

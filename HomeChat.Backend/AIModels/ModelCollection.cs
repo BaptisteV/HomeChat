@@ -35,7 +35,10 @@ public class ModelCollection : IModelCollection
             };
         }).ToList();
 
-        _models.First(m => m.ShortName.Contains("Llama-3", StringComparison.CurrentCultureIgnoreCase)).IsSelected = true;
+        if (_models.Count == 0)
+            throw new FileNotFoundException("No model found");
+
+        _models.MinBy(m => m.SizeInMb)!.IsSelected = true;
     }
 
     public Task<ModelDescription> GetSelectedModel()

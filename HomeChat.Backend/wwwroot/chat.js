@@ -1,14 +1,11 @@
 import newTextEvent from "./event.js"
 
 const aiEvent = "aiMessage";
-const url = "https://mygpt.freeboxos.fr:7228/api/Prompt";
+const url = "api/Prompt";
 
 let eventSource = null;
 function initEventSource(prompt, maxTokens) {
-    const query = new URL(url);
-    query.searchParams.append("prompt", prompt);
-    query.searchParams.append("maxTokens", maxTokens);
-
+    const query = url + "?prompt=" + encodeURIComponent(prompt) + "&maxTokens=" + maxTokens;
     eventSource = new EventSource(query, {
         withCredentials: false,
     });
@@ -20,11 +17,8 @@ function initEventSource(prompt, maxTokens) {
 }
 
 function onNewTextHandler(e) {
-    console.log("received ai event: ", e);
     const data = JSON.parse(e.data);
     if (data == null || data.newText == null || data.newText == "") {
-        //window.removeEventListener(newTextEvent.name, onNewTextHandler, true);
-        //window.removeEventListener(newTextEvent.name, handleEventDetail, true);
         eventSource.close();
         handlerAiMessage(null);
         return;
@@ -43,26 +37,26 @@ function queryBackend(prompt, maxTokens) {
 function getLastResponse() {
     return document.querySelector("#chat-container > :last-child");
 }
+
 function handleEventDetail(eventDetail) {
-    console.log("received ");
-    console.log(eventDetail);
+    //console.log(eventDetail);
     const newText = eventDetail.detail;
 
     const lastResponse = getLastResponse();
     if (lastResponse.classList.contains("userMessage")) {
         createNewMessage("", getAiTemplate());
     }
+    console.log("adding :(" + newText + ")", typeof newText);
+    if (newText !== null)
     getLastResponse().innerHTML += newText;
 }
 
 window.addEventListener(newTextEvent.name, handleEventDetail);
 
 function handlerAiMessage(aiData) {
-    var event = new CustomEvent(newTextEvent.name, { detail: aiData });
-    console.log("dispatching ", event);
+    const event = new CustomEvent(newTextEvent.name, { detail: aiData });
     window.dispatchEvent(event);
 }
-
 
 function createNewMessage(message, template) {
     const messageDiv = template.cloneNode(false);
@@ -87,7 +81,6 @@ function onPromptClick(e) {
     console.log("creating new user message : " + newMessageContent);
     createNewMessage(newMessageContent, getUserTemplate());
     queryBackend(newMessageContent, 250);
-    //window.dispatchEvent(new CustomEvent(newTextEvent.name, { detail: newMessageContent }));
 }
 
 // binding

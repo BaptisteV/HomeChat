@@ -54,8 +54,9 @@ public class TextProcessor(IModelCollection _modelCollection) : ITextProcessor, 
         var message = new ChatHistory.Message(AuthorRole.User, prompt);
 
         if (_session!.History.Messages.LastOrDefault()?.AuthorRole == AuthorRole.User)
+        {
             return;
-
+        }
 
         var chats = _session!.ChatAsync(message, inferenceParams, cancellationToken);
 

@@ -14,9 +14,18 @@ public class WebTests : IClassFixture<WebApplicationFactory<Program>>
     }
 
     [Fact]
-    public async Task Test1()
+    public async Task TestHome()
     {
         var response = await _client.GetAsync($"/Home");
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("text/html", response.Content.Headers.ContentType?.MediaType);
+    }
+
+    [Fact]
+    public async Task TestSlash()
+    {
+        var response = await _client.GetAsync($"/");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("text/html", response.Content.Headers.ContentType?.MediaType);
     }
 }
