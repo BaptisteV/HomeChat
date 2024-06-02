@@ -39,16 +39,14 @@ function getLastResponse() {
 }
 
 function handleEventDetail(eventDetail) {
-    //console.log(eventDetail);
     const newText = eventDetail.detail;
 
     const lastResponse = getLastResponse();
     if (lastResponse.classList.contains("userMessage")) {
         createNewMessage("", getAiTemplate());
     }
-    console.log("adding :(" + newText + ")", typeof newText);
     if (newText !== null)
-    getLastResponse().innerHTML += newText;
+        getLastResponse().innerHTML += newText;
 }
 
 window.addEventListener(newTextEvent.name, handleEventDetail);
@@ -60,9 +58,12 @@ function handlerAiMessage(aiData) {
 
 function createNewMessage(message, template) {
     const messageDiv = template.cloneNode(false);
-    messageDiv.id = "";
-    messageDiv.innerHTML = message;
+    messageDiv.removeAttribute("id");
     messageDiv.classList.remove("hidden");
+    const messageContentElement = document.createElement("md-block");
+    messageContentElement.textContent = message;
+    console.log("adding ", messageContentElement, " to ", messageDiv);
+    messageDiv.appendChild(messageContentElement);
 
     const chatContainer = document.getElementById("chat-container");
     chatContainer.appendChild(messageDiv);
@@ -78,11 +79,10 @@ function getAiTemplate() {
 
 function onPromptClick(e) {
     const newMessageContent = document.getElementById("prompt-input").value;
-    console.log("creating new user message : " + newMessageContent);
+
     createNewMessage(newMessageContent, getUserTemplate());
-    queryBackend(newMessageContent, 250);
+    queryBackend(newMessageContent, 100);
 }
 
-// binding
 const promptButton = document.getElementById("prompt-button");
 promptButton.onclick = onPromptClick;

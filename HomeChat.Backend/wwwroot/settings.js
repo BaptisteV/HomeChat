@@ -13,7 +13,7 @@ async function showModels() {
 
         newModel.innerHTML = model.description;
 
-        if (model.selected)
+        if (model.isSelected)
             newModel.style.fontWeight = 'bold';
 
         modelContainer.appendChild(newModel);

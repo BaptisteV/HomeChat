@@ -11,7 +11,7 @@ public interface ITextProcessor
     Task Process(string prompt, int maxTokens, Func<string, Task> onNewText, CancellationToken cancellationToken);
 }
 
-public class TextProcessor(IModelCollection _modelCollection) : ITextProcessor, IAsyncDisposable
+public class TextProcessor(IModelCollection _modelCollection, ILogger<TextProcessor> _logger) : ITextProcessor, IAsyncDisposable
 {
     private LLamaWeights _model;
     private ChatSession _session;
@@ -64,6 +64,7 @@ public class TextProcessor(IModelCollection _modelCollection) : ITextProcessor, 
         {
             if (cancellationToken.IsCancellationRequested)
             {
+                _logger.LogInformation("{Process} stopped. Cancellation was requested", nameof(Process));
                 return;
             }
 

@@ -6,7 +6,6 @@ using Microsoft.AspNetCore.HttpLogging;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Net.Http.Headers;
 using NReco.Logging.File;
-using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -42,12 +41,15 @@ builder.Services.AddLogging(builder
 builder.Services.AddSingleton<IModelCollection, ModelCollection>();
 builder.Services.AddSingleton<IPerformanceMonitor, PerformanceMonitor>();
 builder.Services.AddSingleton<ITextProcessor, TextProcessor>();
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<IChatResponseWriter, ChatResponseWriter>();
 
 var app = builder.Build();
 
 app.UseStaticFiles();
 app.UseHttpsRedirection();
 app.UseHttpLogging();
+
 
 app.MapGet("/", HandleHome);
 app.MapGet("/Home", HandleHome);
@@ -73,6 +75,7 @@ async Task<EmptyHttpResult> HandlePrompt(
     [FromQuery] int maxTokens,
     [FromServices] ILogger<Program> logger,
     [FromServices] ITextProcessor textProcessor,
+    [FromServices] IChatResponseWriter chatResponseWriter,
     HttpContext context,
     CancellationToken cancellationToken)
 {
@@ -88,11 +91,12 @@ async Task<EmptyHttpResult> HandlePrompt(
                 return;
             Console.Write(text);
             wholeResponse += text;
-            await context.Response.WriteAsync("event: aiMessage\n");
+            await chatResponseWriter.WriteEvent(text);
+            /*await context.Response.WriteAsync("event: aiMessage\n");
             await context.Response.WriteAsync("data: ");
             await context.Response.WriteAsync(JsonSerializer.Serialize(new { newText = text }));
             await context.Response.WriteAsync($"\n\n");
-            await context.Response.Body.FlushAsync();
+            await context.Response.Body.FlushAsync();*/
 
         }, cancellationToken);
     logger.LogInformation("Ai response: {Response}", wholeResponse);

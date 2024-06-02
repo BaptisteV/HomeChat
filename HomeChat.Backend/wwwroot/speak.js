@@ -10,7 +10,7 @@ const voice = voices[0];
 function speak(detail) {
     const utterThis = new SpeechSynthesisUtterance(detail);
     utterThis.voice = voice;
-    utterThis.rate = 1.5;
+    utterThis.rate = 1.1;
     synth.speak(utterThis);
 };
 
