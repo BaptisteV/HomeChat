@@ -22,7 +22,7 @@ public class PromptTests : IClassFixture<WebApplicationFactory<Program>>
         queryParams.Add("prompt", prompt);
         queryParams.Add("maxTokens", 50.ToString());
         var queryString = QueryString.Create(queryParams).Value;
-        var response = await _client.GetAsync($"api/Prompt{queryString}");
+        var response = await _client.GetAsync($"api/{Guid.NewGuid()}/Prompt{queryString}");
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 }

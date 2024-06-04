@@ -38,8 +38,9 @@ builder.Services.AddLogging(builder
         )
 );
 
-builder.Services.AddSingleton<IModelCollection, ModelCollection>();
+builder.Services.AddTransient<IModelCollection, ModelCollection>();
 builder.Services.AddSingleton<IPerformanceMonitor, PerformanceMonitor>();
+builder.Services.AddSingleton<IChatSessionManager, ChatSessionManager>();
 builder.Services.AddSingleton<ITextProcessor, TextProcessor>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IChatResponseWriter, ChatResponseWriter>();
@@ -54,56 +55,63 @@ app.UseHttpLogging();
 app.MapGet("/", HandleHome);
 app.MapGet("/Home", HandleHome);
 
-app.MapGet("/api/Prompt", HandlePrompt);
+app.MapGet("/api/{sessionId:guid}/Prompt", HandlePrompt);
 
 app.MapGet("/api/PerformanceSummary", async ([FromServices] IPerformanceMonitor performanceMonitor)
     => await performanceMonitor.GetPerformanceSummaryAsync());
 
-app.MapPost("/api/Models", async ([FromBody] ModelChange modelShortName, [FromServices] ITextProcessor textProcessor, [FromServices] IModelCollection models) =>
+app.MapPost("/api/{sessionId:guid}/Models",
+    async ([FromBody] ModelChange modelShortName,
+    HttpContext context,
+    [FromServices] IChatSessionManager sessionManager,
+    [FromServices] ILogger<Program> logger,
+    [FromRoute] Guid sessionId) =>
 {
-    models.SelectModel(modelShortName.NewModelShortName);
-    await textProcessor.LoadSelectedModel();
+    var session = await sessionManager.GetOrSetSession(sessionId);
+    logger.LogInformation("Session Id: {SessionId} Remote IP: {RemoteIpAdress} New model short name: {NewModelShortName}", sessionId, context.Connection.RemoteIpAddress, modelShortName.NewModelShortName);
+    await session.SelectModel(modelShortName.NewModelShortName);
+    await session.LoadSelectedModel();
 });
 
-app.MapGet("/api/Models", async ([FromServices] IModelCollection models) =>
+app.MapGet("/api/{sessionId:guid}/Models",
+    async (HttpContext context,
+    [FromServices] IChatSessionManager sessionManager,
+    [FromRoute] Guid sessionId,
+    [FromServices] ILogger<Program> logger) =>
 {
-    return await models.GetModels();
+    var session = await sessionManager.GetOrSetSession(sessionId);
+    var models = await session.GetModels();
+    var selectedModel = models.Single(m => m.IsSelected);
+    logger.LogInformation("Session Id: {SessionId} Remote IP: {RemoteIpAdress} Retreived {ModelsCount}. Selected model : {SelectedModel}", sessionId, context.Connection.RemoteIpAddress, models.Count, selectedModel.ShortName);
+    return models;
 });
 
 async Task<EmptyHttpResult> HandlePrompt(
     [FromQuery] string prompt,
     [FromQuery] int maxTokens,
     [FromServices] ILogger<Program> logger,
-    [FromServices] ITextProcessor textProcessor,
     [FromServices] IChatResponseWriter chatResponseWriter,
+    [FromServices] IChatSessionManager sessionManager,
     HttpContext context,
-    CancellationToken cancellationToken)
+    CancellationToken cancellationToken,
+    [FromRoute] Guid sessionId)
 {
-    logger.LogInformation("Remote IP: {RemoteIpAdress} Prompt :{Prompt}", context.Connection.RemoteIpAddress, prompt);
+    logger.LogInformation("Session Id: {SessionId} Remote IP: {RemoteIpAdress} Prompt :{Prompt}", sessionId, context.Connection.RemoteIpAddress, prompt);
     context.Response.Headers.Append("Content-Type", "text/event-stream");
     var wholeResponse = "";
-    await textProcessor.Process(
-        prompt,
-        maxTokens,
-        onNewText: async (text) =>
+    var session = await sessionManager.GetOrSetSession(sessionId);
+
+    await session.Process(prompt, maxTokens, onNewText: async (text) =>
         {
             if (string.IsNullOrEmpty(text))
                 return;
             Console.Write(text);
             wholeResponse += text;
             await chatResponseWriter.WriteEvent(text);
-            /*await context.Response.WriteAsync("event: aiMessage\n");
-            await context.Response.WriteAsync("data: ");
-            await context.Response.WriteAsync(JsonSerializer.Serialize(new { newText = text }));
-            await context.Response.WriteAsync($"\n\n");
-            await context.Response.Body.FlushAsync();*/
-
         }, cancellationToken);
-    logger.LogInformation("Ai response: {Response}", wholeResponse);
-    await context.Response.WriteAsync("event: aiMessage\n");
-    await context.Response.WriteAsync("data: \"{'newText':''}\"");
-    await context.Response.WriteAsync($"\n\n");
-    await context.Response.Body.FlushAsync();
+
+    logger.LogInformation("Session Id: {SessionId} Ai response: {Response}", sessionId, wholeResponse);
+    await chatResponseWriter.WriteEvent("");
 
     return TypedResults.Empty;
 }

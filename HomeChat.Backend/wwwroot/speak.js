@@ -2,14 +2,14 @@ import newTextEvent from "./event.js"
 
 const synth = window.speechSynthesis;
 const voices = synth.getVoices();
-const voice = voices[0];
+let currentVoice = voices[0];
 
 /**
  * @param {string} detail
  */
 function speak(detail) {
     const utterThis = new SpeechSynthesisUtterance(detail);
-    utterThis.voice = voice;
+    utterThis.voice = currentVoice;
     utterThis.rate = 1.1;
     synth.speak(utterThis);
 };
@@ -45,3 +45,15 @@ window.addEventListener(newTextEvent.name, (newText) => {
     }
     phraseBuffer.addText(newText.detail);
 });
+
+export default {
+    stopSpeak: function () {
+        synth.cancel()
+    },
+    changeLang: function (lang) {
+        currentVoice = voices.find(voice => voice.lang === lang);
+        if (!currentVoice) {
+            console.error(`Voice for language "${lang}" not found.`);
+        }
+    }
+};

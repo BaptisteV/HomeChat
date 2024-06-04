@@ -5,13 +5,15 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace HomeChat.Backend;
 
-public interface ITextProcessor
+public interface ITextProcessor : IAsyncDisposable
 {
+    Task SelectModel(string modelShortName);
     Task LoadSelectedModel();
+    Task<List<ModelDescription>> GetModels();
     Task Process(string prompt, int maxTokens, Func<string, Task> onNewText, CancellationToken cancellationToken);
 }
 
-public class TextProcessor(IModelCollection _modelCollection, ILogger<TextProcessor> _logger) : ITextProcessor, IAsyncDisposable
+public class TextProcessor(IModelCollection _modelCollection, ILogger<TextProcessor> _logger) : ITextProcessor
 {
     private LLamaWeights _model;
     private ChatSession _session;
@@ -78,5 +80,16 @@ public class TextProcessor(IModelCollection _modelCollection, ILogger<TextProces
         _model?.Dispose();
         GC.SuppressFinalize(this);
         return ValueTask.CompletedTask;
+    }
+
+    public async Task<List<ModelDescription>> GetModels()
+    {
+        return await _modelCollection.GetModels();
+    }
+
+    public Task SelectModel(string modelShortName)
+    {
+        _modelCollection.SelectModel(modelShortName);
+        return Task.CompletedTask;
     }
 }

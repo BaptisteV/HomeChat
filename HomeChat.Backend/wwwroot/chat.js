@@ -1,11 +1,12 @@
 import newTextEvent from "./event.js"
+import session from "./session.js"
+import settings from "./settings.js"
 
 const aiEvent = "aiMessage";
-const url = "api/Prompt";
 
 let eventSource = null;
 function initEventSource(prompt, maxTokens) {
-    const query = url + "?prompt=" + encodeURIComponent(prompt) + "&maxTokens=" + maxTokens;
+    const query = `api/${session.sessionId()}/Prompt?prompt=${encodeURIComponent(prompt)}&maxTokens=${maxTokens}`;
     eventSource = new EventSource(query, {
         withCredentials: false,
     });
@@ -81,7 +82,7 @@ function onPromptClick(e) {
     const newMessageContent = document.getElementById("prompt-input").value;
 
     createNewMessage(newMessageContent, getUserTemplate());
-    queryBackend(newMessageContent, 100);
+    queryBackend(newMessageContent, settings.getResponseSize());
 }
 
 const promptButton = document.getElementById("prompt-button");

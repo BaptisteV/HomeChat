@@ -1,6 +1,8 @@
+import session from "./session.js"
+
 export default {
     GetModels: async function () {
-        const response = await fetch("/api/Models", {
+        const response = await fetch(`api/${session.sessionId()}/Models`, {
             method: "GET",
             headers: {
                 "Content-Type": "application/json",
@@ -12,7 +14,7 @@ export default {
         return models;
     },
     SetModel: async function (newModelShortName) {
-        await fetch("api/Models", {
+        await fetch(`api/${session.sessionId()}/Models`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",

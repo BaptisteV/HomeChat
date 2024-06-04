@@ -18,7 +18,7 @@ public class ModelSelectionTests : IClassFixture<WebApplicationFactory<Program>>
     [Fact]
     public async Task AtLeast2Models()
     {
-        var response = await _client.GetAsync($"/api/Models");
+        var response = await _client.GetAsync($"/api/{Guid.NewGuid()}/Models");
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var models = await response.Content.ReadFromJsonAsync<List<ModelDescription>>();
         Assert.NotNull(models);
@@ -29,14 +29,15 @@ public class ModelSelectionTests : IClassFixture<WebApplicationFactory<Program>>
     [Fact]
     public async Task CanSelectAnotherModel()
     {
-        var modelsResponseBefore = await _client.GetAsync($"/api/Models");
+        var sessionId = Guid.NewGuid();
+        var modelsResponseBefore = await _client.GetAsync($"/api/{sessionId}/Models");
         Assert.Equal(HttpStatusCode.OK, modelsResponseBefore.StatusCode);
         var modelsBefore = await modelsResponseBefore.Content.ReadFromJsonAsync<List<ModelDescription>>();
         var newModelName = modelsBefore.First(m => !m.IsSelected).ShortName;
-        var response = await _client.PostAsync($"/api/Models", JsonContent.Create(new ModelChange(newModelName)));
+        var response = await _client.PostAsync($"/api/{sessionId}/Models", JsonContent.Create(new ModelChange(newModelName)));
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
-        var modelsResponseAfter = await _client.GetAsync($"/api/Models");
+        var modelsResponseAfter = await _client.GetAsync($"/api/{sessionId}/Models");
         Assert.Equal(HttpStatusCode.OK, modelsResponseAfter.StatusCode);
         var modelsAfter = await modelsResponseAfter.Content.ReadFromJsonAsync<List<ModelDescription>>();
         Assert.Equal(newModelName, modelsAfter.Single(m => m.IsSelected).ShortName);

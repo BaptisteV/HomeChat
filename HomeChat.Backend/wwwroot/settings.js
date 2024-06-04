@@ -1,5 +1,5 @@
 import httpClient from "./httpClient.js"
-
+import speak from "./speak.js"
 
 async function showModels() {
     let models = await httpClient.GetModels();
@@ -13,8 +13,10 @@ async function showModels() {
 
         newModel.innerHTML = model.description;
 
-        if (model.isSelected)
+        if (model.isSelected) {
+            newModel.classList.add("bg-gray-100");
             newModel.style.fontWeight = 'bold';
+        }
 
         modelContainer.appendChild(newModel);
         newModel.onclick = async (e) => {
@@ -30,4 +32,24 @@ async function showModels() {
 
     }
 }
+
 await showModels();
+
+const muteButton = document.getElementById("mute-button");
+muteButton.onclick = (e) => {
+    speak.stopSpeak();
+};
+const langItems = document.querySelectorAll("[data-lang]");
+langItems.forEach((langItem) => {
+    langItem.onclick = (e) => {
+        console.log(e.target.dataset);
+        speak.changeLang(e.target.dataset.lang);
+    }
+});
+
+export default {
+    getResponseSize: function () {
+        const slider = document.getElementById("response-size-slider");
+        return slider.value;
+    }
+}

@@ -10,6 +10,18 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Content Remove="wwwroot\session.js" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <_ContentIncludedByDefault Remove="wwwroot\session.js" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="wwwroot\session.js" />
+  </ItemGroup>
+
+  <ItemGroup>
 	  <PackageReference Include="LLamaSharp" Version="0.12.0" />
 	  <PackageReference Include="LLamaSharp.Backend.Cuda12" Version="0.12.0" />
 	  <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.1" />
@@ -40,10 +52,6 @@
     <Content Update="wwwroot\style.css">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="wwwroot\md\" />
   </ItemGroup>
 
 </Project>

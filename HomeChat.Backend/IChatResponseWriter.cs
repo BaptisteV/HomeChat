@@ -22,7 +22,7 @@ public class ChatResponseWriter : IChatResponseWriter
             event: aiMessage
             data: {JsonSerializer.Serialize(new { newText = newText })}
             """;
-        await _httpContextAccessor.HttpContext.Response.WriteAsync(newEvent);
+        await _httpContextAccessor.HttpContext!.Response.WriteAsync(newEvent);
         await _httpContextAccessor.HttpContext.Response.WriteAsync($"\n\n");
         await _httpContextAccessor.HttpContext.Response.Body.FlushAsync();
     }
