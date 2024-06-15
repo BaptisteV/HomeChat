@@ -2,7 +2,6 @@ using HomeChat.Backend;
 using HomeChat.Backend.AIModels;
 using HomeChat.Backend.Performances;
 using Microsoft.AspNetCore.Http.HttpResults;
-using Microsoft.AspNetCore.HttpLogging;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Net.Http.Headers;
 using NReco.Logging.File;
@@ -11,7 +10,6 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddHttpLogging(o =>
 {
-    o.LoggingFields = HttpLoggingFields.All;
     o.RequestHeaders.Add(HeaderNames.ContentType);
     o.RequestHeaders.Add(HeaderNames.ContentEncoding);
     o.RequestHeaders.Add(HeaderNames.ContentLength);
@@ -41,7 +39,7 @@ builder.Services.AddLogging(builder
 builder.Services.AddTransient<IModelCollection, ModelCollection>();
 builder.Services.AddSingleton<IPerformanceMonitor, PerformanceMonitor>();
 builder.Services.AddSingleton<IChatSessionManager, ChatSessionManager>();
-builder.Services.AddSingleton<ITextProcessor, TextProcessor>();
+builder.Services.AddSingleton<IChat, Chat>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IChatResponseWriter, ChatResponseWriter>();
 
@@ -51,9 +49,20 @@ app.UseStaticFiles();
 app.UseHttpsRedirection();
 app.UseHttpLogging();
 
-
 app.MapGet("/", HandleHome);
 app.MapGet("/Home", HandleHome);
+
+async Task HandleHome(HttpContext httpContext)
+{
+    httpContext.Response.ContentType = "text/html";
+    var html = await File.ReadAllTextAsync(@"./wwwroot/index.html");
+    await httpContext.Response.WriteAsync(html);
+}
+
+app.MapDelete("/api/Sessions", async ([FromQuery] Guid sessionId, [FromServices] IChatSessionManager sessionManager) =>
+{
+    await sessionManager.DeleteSession(sessionId);
+});
 
 app.MapGet("/api/{sessionId:guid}/Prompt", HandlePrompt);
 
@@ -86,6 +95,19 @@ app.MapGet("/api/{sessionId:guid}/Models",
     return models;
 });
 
+app.MapGet("/api/{sessionId:guid}/Chats",
+    async (HttpContext context,
+    [FromServices] IChatSessionManager sessionManager,
+    [FromRoute] Guid sessionId,
+    [FromServices] ILogger<Program> logger) =>
+    {
+        logger.LogInformation("Session Id: {SessionId} Remote IP: {RemoteIpAdress}", sessionId, context.Connection.RemoteIpAddress);
+
+        var session = await sessionManager.GetOrSetSession(sessionId);
+        return session.GetConversation();
+    });
+
+
 async Task<EmptyHttpResult> HandlePrompt(
     [FromQuery] string prompt,
     [FromQuery] int maxTokens,
@@ -115,13 +137,6 @@ async Task<EmptyHttpResult> HandlePrompt(
 
     return TypedResults.Empty;
 }
-async Task HandleHome(HttpContext httpContext)
-{
-    httpContext.Response.ContentType = "text/html";
-    var html = await File.ReadAllTextAsync(@"./wwwroot/index.html");
-    await httpContext.Response.WriteAsync(html);
-}
-
 await app.RunAsync();
 
 public partial class Program { protected Program() { } }

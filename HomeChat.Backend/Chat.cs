@@ -5,27 +5,31 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace HomeChat.Backend;
 
-public interface ITextProcessor : IAsyncDisposable
+public interface IChat : IAsyncDisposable
 {
     Task SelectModel(string modelShortName);
     Task LoadSelectedModel();
     Task<List<ModelDescription>> GetModels();
     Task Process(string prompt, int maxTokens, Func<string, Task> onNewText, CancellationToken cancellationToken);
+
+    Task<(string modelShortName, string[] conversation)> GetConversation();
 }
 
-public class TextProcessor(IModelCollection _modelCollection, ILogger<TextProcessor> _logger) : ITextProcessor
+public class Chat(IModelCollection _modelCollection, ILogger<Chat> _logger) : IChat
 {
     private LLamaWeights _model;
-    private ChatSession _session;
+    private ChatSession _chatSession;
     private LLamaContext _context;
+    private ModelDescription _currentModel;
 
     [MemberNotNull(nameof(_model))]
-    [MemberNotNull(nameof(_session))]
+    [MemberNotNull(nameof(_chatSession))]
     [MemberNotNull(nameof(_context))]
     public async Task LoadSelectedModel()
     {
         var rand = new Random();
-        var modelFile = (await _modelCollection.GetSelectedModel()).Filename;
+        _currentModel = await _modelCollection.GetSelectedModel();
+        var modelFile = _currentModel.Filename;
         var parameters = new ModelParams(modelFile)
         {
             ContextSize = 1024,
@@ -37,30 +41,27 @@ public class TextProcessor(IModelCollection _modelCollection, ILogger<TextProces
         // Initialize a chat session
         _context = _model.CreateContext(parameters);
         var executor = new InteractiveExecutor(_context);
-        _session = new ChatSession(executor);
+        _chatSession = new ChatSession(executor);
     }
 
     public async Task Process(string prompt, int maxTokens, Func<string, Task> onNewText, CancellationToken cancellationToken)
     {
         var inferenceParams = new InferenceParams()
         {
-            Temperature = 0.6f,
+            Temperature = 0.4f,
             MaxTokens = maxTokens,
-            RepeatLastTokensCount = -1,
+            RepeatLastTokensCount = 0,
             RepeatPenalty = 1.2f,
         };
 
-        if (_session is null)
-            await LoadSelectedModel();
-
         var message = new ChatHistory.Message(AuthorRole.User, prompt);
 
-        if (_session!.History.Messages.LastOrDefault()?.AuthorRole == AuthorRole.User)
+        if (_chatSession!.History.Messages.LastOrDefault()?.AuthorRole == AuthorRole.User)
         {
             return;
         }
 
-        var chats = _session!.ChatAsync(message, inferenceParams, cancellationToken);
+        var chats = _chatSession!.ChatAsync(message, inferenceParams, cancellationToken);
 
         await foreach (var text in chats)
         {
@@ -91,5 +92,11 @@ public class TextProcessor(IModelCollection _modelCollection, ILogger<TextProces
     {
         _modelCollection.SelectModel(modelShortName);
         return Task.CompletedTask;
+    }
+
+    public Task<(string modelShortName, string[] conversation)> GetConversation()
+    {
+        var conversationContent = _chatSession.History.Messages.Select(s => s.Content).ToArray();
+        return Task.FromResult((modelShortName: _currentModel.ShortName, conversation: conversationContent));
     }
 }

@@ -63,7 +63,6 @@ function createNewMessage(message, template) {
     messageDiv.classList.remove("hidden");
     const messageContentElement = document.createElement("md-block");
     messageContentElement.textContent = message;
-    console.log("adding ", messageContentElement, " to ", messageDiv);
     messageDiv.appendChild(messageContentElement);
 
     const chatContainer = document.getElementById("chat-container");
@@ -86,4 +85,4 @@ function onPromptClick(e) {
 }
 
 const promptButton = document.getElementById("prompt-button");
-promptButton.onclick = onPromptClick;
+promptButton.addEventListener("click", onPromptClick, false);

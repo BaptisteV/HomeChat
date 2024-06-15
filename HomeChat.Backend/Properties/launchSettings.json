@@ -22,12 +22,19 @@
     "https": {
       "commandName": "Project",
       "dotnetRunMessages": true,
-      "launchBrowser": false,
+      "launchBrowser": true,
       "launchUrl": "",
       "applicationUrl": "https://localhost:7228;http://localhost:5049",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       }
+    },
+    "deploy": {
+      "commandName": "Project",
+      "dotnetRunMessages": false,
+      "launchBrowser": false,
+      "launchUrl": "",
+      "applicationUrl": "https://::7228;http://::5049"
     },
     "IIS Express": {
       "commandName": "IISExpress",

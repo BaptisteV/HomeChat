@@ -1,15 +1,33 @@
 ﻿namespace HomeChat.Backend.AIModels;
 
+public class ModelCollectionConfiguration
+{
+    public string ModelLookupRootDirectory { get; set; } = "";
+    public bool ApplyFilters { get; set; }
+    public string[] ModelFilenameFilters { get; set; } = [""];
+}
+
 public class ModelCollection : IModelCollection
 {
-    private readonly string ModelRootSearchPath = @"C:\Users\Bapt\.cache\lm-studio\models";
+    private ModelCollectionConfiguration _configuration = new();
     private List<ModelDescription> _models = [];
 
-    public ModelCollection()
+    public ModelCollection(IConfiguration configuration)
     {
+        ReadConfiguration(configuration);
         ScanForModels();
     }
 
+    private void ReadConfiguration(IConfiguration configuration)
+    {
+        var section = configuration.GetRequiredSection(nameof(ModelCollectionConfiguration));
+        _configuration = new ModelCollectionConfiguration()
+        {
+            ApplyFilters = section.GetValue<bool>(nameof(ModelCollectionConfiguration.ApplyFilters)),
+            ModelFilenameFilters = section.GetSection(nameof(ModelCollectionConfiguration.ModelFilenameFilters)).Get<string[]>()!,
+            ModelLookupRootDirectory = section.GetValue<string>(nameof(ModelCollectionConfiguration.ModelLookupRootDirectory))!,
+        };
+    }
     public void SelectModel(string modelShortName)
     {
         var model = _models.Single(m => m.ShortName == modelShortName);
@@ -19,8 +37,8 @@ public class ModelCollection : IModelCollection
 
     private void ScanForModels()
     {
-        if (!Directory.Exists(ModelRootSearchPath)) throw new DirectoryNotFoundException($"Folder {ModelRootSearchPath}' introuvable");
-        var filenames = Directory.GetFiles(ModelRootSearchPath, "*.gguf", SearchOption.AllDirectories);
+        if (!Directory.Exists(_configuration.ModelLookupRootDirectory)) throw new DirectoryNotFoundException($"Folder '{_configuration.ModelLookupRootDirectory}' introuvable");
+        var filenames = Directory.GetFiles(_configuration.ModelLookupRootDirectory, "*.gguf", SearchOption.AllDirectories);
         var files = filenames.Select(f => new FileInfo(f)).ToList();
         _models = files.Select(f =>
         {
@@ -35,8 +53,17 @@ public class ModelCollection : IModelCollection
             };
         }).ToList();
 
+        if (_configuration.ApplyFilters)
+        {
+            _models = _models.Where(m => _configuration.ModelFilenameFilters.Any(c => m.Filename.Contains(c, StringComparison.OrdinalIgnoreCase))).ToList();
+
+            if (_models.Count == 0)
+                throw new FileNotFoundException($"No model found using filters: {string.Join(", ", _configuration.ModelFilenameFilters)}" +
+                    $". Models found: {string.Join(", ", _models.Select(m => m.Filename))}");
+        }
+
         if (_models.Count == 0)
-            throw new FileNotFoundException("No model found");
+            throw new FileNotFoundException($"No model found");
 
         _models.MinBy(m => m.SizeInMb)!.IsSelected = true;
     }

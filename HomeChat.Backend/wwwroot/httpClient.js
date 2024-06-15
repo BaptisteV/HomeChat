@@ -23,6 +23,15 @@ export default {
         });
     },
 
+    DeleteSession: async function (sessionId) {
+        await fetch(`api/Sessions?sessionId=${session.sessionId()}`, {
+            method: "DELETE",
+            headers: {
+                "Content-Type": "application/json",
+            },
+        });
+    },
+
     GetPrompt: async function (prompt, maxTokens) {
         // TODO
     }

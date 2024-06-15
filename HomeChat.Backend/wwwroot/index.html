@@ -13,6 +13,7 @@
     <script type="module" src="https://md-block.verou.me/md-block.js"></script>
 
     <script type="module" src="./session.js" defer></script>
+    <script type="module" src="./promptHistory.js" defer></script>
     <script type="module" src="./httpClient.js" defer></script>
     <script type="module" src="./event.js" defer></script>
     <script type="module" src="./speak.js" defer></script>
@@ -133,11 +134,12 @@
                 </div>
 
                 <!-- Chat -->
+                <div id="userMessageTemplate" class="border-green-100 bg-green-100 m-2 ml-[2em] p-2 userMessage hidden rounded-md border-2 text-right shadow hover:shadow-md">
+                </div>
+                <div id="aiMessageTemplate" class="bg-blue-100 m-2 mr-[2em] px-[1em] border-blue-100 aiMessage hidden rounded-md border-2 shadow hover:shadow-md">
+                </div>
                 <div id="chat-container" class="tw-h-full tw-min-h-0 grow overflow-y-scroll scroll-smooth rounded-lg shadow-md hover:shadow-lg">
-                    <div id="userMessageTemplate" class="border-green-100 bg-green-100 m-2 ml-[2em] p-2 userMessage hidden rounded-md border-2 text-right shadow hover:shadow-md">
-                    </div>
-                    <div id="aiMessageTemplate" class="bg-blue-100 m-2 mr-[2em] px-[1em] border-blue-100 aiMessage hidden rounded-md border-2 shadow hover:shadow-md">
-                    </div>
+
                 </div>
                 <!-- Inputs -->
                 <div class="mt-2 h-[8em] flex grow-0 rounded-lg shadow-md hover:shadow-lg">
