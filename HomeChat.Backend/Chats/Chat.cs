@@ -1,9 +1,10 @@
 ﻿using HomeChat.Backend.AIModels;
+using HomeChat.Backend.Performances;
 using LLama;
 using LLama.Common;
-using System.Diagnostics.CodeAnalysis;
+using System.Data;
 
-namespace HomeChat.Backend;
+namespace HomeChat.Backend.Chats;
 
 public interface IChat : IAsyncDisposable
 {
@@ -15,33 +16,49 @@ public interface IChat : IAsyncDisposable
     Task<(string modelShortName, string[] conversation)> GetConversation();
 }
 
-public class Chat(IModelCollection _modelCollection, ILogger<Chat> _logger) : IChat
+public class Chat(IModelCollection _modelCollection, ILogger<Chat> _logger, IPerformanceMonitor performanceMonitor) : IChat
 {
     private LLamaWeights _model;
     private ChatSession _chatSession;
     private LLamaContext _context;
     private ModelDescription _currentModel;
+    private readonly IPerformanceMonitor _performanceMonitor = performanceMonitor;
 
-    [MemberNotNull(nameof(_model))]
-    [MemberNotNull(nameof(_chatSession))]
-    [MemberNotNull(nameof(_context))]
     public async Task LoadSelectedModel()
     {
         var rand = new Random();
-        _currentModel = await _modelCollection.GetSelectedModel();
-        var modelFile = _currentModel.Filename;
-        var parameters = new ModelParams(modelFile)
+
+        var modelToSet = await _modelCollection.GetSelectedModel();
+        var parameters = new ModelParams(modelToSet.Filename)
         {
             ContextSize = 1024,
             Seed = (uint)rand.Next(1 << 30) << 2 | (uint)rand.Next(1 << 2),
             GpuLayerCount = 35,
         };
-        _model = await LLamaWeights.LoadFromFileAsync(parameters)!;
+
+        try
+        {
+            var selectedFilename = modelToSet.Filename;
+            if (_model is null || (_currentModel.Filename != selectedFilename))
+            {
+                _model = await LLamaWeights.LoadFromFileAsync(parameters);
+            }
+        }
+        catch (LLama.Exceptions.LoadWeightsFailedException e)
+        {
+            _logger.LogError(e, "Probably lacking memory trying to load {Model}", Path.GetFileName(e.ModelPath));
+            await _performanceMonitor.DeleteInactiveSessions();
+            throw;
+        }
 
         // Initialize a chat session
         _context = _model.CreateContext(parameters);
         var executor = new InteractiveExecutor(_context);
         _chatSession = new ChatSession(executor);
+
+        _currentModel = await _modelCollection.GetSelectedModel();
+        if (_model is null || _chatSession is null || _context is null)
+            throw new NoNullAllowedException();
     }
 
     public async Task Process(string prompt, int maxTokens, Func<string, Task> onNewText, CancellationToken cancellationToken)

@@ -10,8 +10,8 @@
     <link rel="stylesheet" href="style.css" />
     <script src="https://cdn.tailwindcss.com"></script>
     <script type="module" src="https://unpkg.com/@material-tailwind/html@latest/scripts/popover.js"></script>
-    <script type="module" src="https://md-block.verou.me/md-block.js"></script>
 
+    <script type="module" src="./audioEffects.js" defer></script>
     <script type="module" src="./session.js" defer></script>
     <script type="module" src="./promptHistory.js" defer></script>
     <script type="module" src="./httpClient.js" defer></script>
@@ -26,43 +26,24 @@
     <body>
         <div class="bg-gray-100 bg-transparent flex h-screen flex-col sm:flex-row">
             <!-- Menu -->
-            <div class="px-4 pt-2 min-w-48 flex grow-0 flex-col border-r">
-                <h2 class="text-gray-800 text-center text-2xl font-semibold">
-                    HomeChat
-                </h2>
-                <div class="border-gray-200 flex items-center justify-center rounded border-2">
+            <div class="flex w-64 grow flex-col border-r px-4 pt-2">
+                <h2 class="text-center text-2xl font-semibold text-gray-800">HomeChat</h2>
+                <div class="flex items-center justify-center rounded border-2 border-gray-200">
                     <img class="h-24 w-24" src="robot.svg" />
                 </div>
-                <div class="mt-2 flex flex-col justify-between">
-                    <aside>
-                        <ul>
-                            <li>
-                                <a class="my-2 px-2 py-2 text-gray-700 flex items-center rounded-md border-2 hover:bg-gray-200" href="#">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                                    </svg>
-                                    <span class="mx-2 overflow-hidden font-medium">
-                                        Chat
-                                    </span>
-                                </a>
-                            </li>
+                <div class="flex flex-col grow">
+                    <div id="history-container" class="h-full rounded-md border-2">
 
-                            <li>
-                                <a class="my-2 px-2 py-2 text-gray-600 flex items-center rounded-md border-2 hover:bg-gray-200" href="/Settings">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                    </svg>
-                                    <span class="mx-2 overflow-hidden font-medium">Settings</span>
-                                </a>
-                            </li>
-                        </ul>
-                    </aside>
+                    </div>
+                    <span id="history-template" class="m-0.5 hidden overflow-hidden text-balance rounded-md border-2 border-r border-blue-100 px-0.5 text-sm hover:bg-gray-200 hover:shadow-md"></span>
+                    <div class="h-64 my-2 flex items-center rounded-md border-2 px-2 py-2 text-gray-600 hover:bg-gray-200">
+
+                    </div>
                 </div>
             </div>
             <div class="mx-8 my-4 flex grow flex-col justify-items-center lg:mx-32 xl:mx-72">
                 <!-- Models -->
-                <span id="modelTemplate" class="model m-0.5 px-0.5 border-blue-100 hidden overflow-hidden text-balance rounded-md border-2 border-r text-sm hover:shadow-md hover:bg-gray-200"></span>
+                <span id="modelTemplate" class="model m-0.5 px-0.5 border-gray-200 hidden overflow-hidden text-balance rounded-md border-2 border-r text-sm hover:shadow-md hover:bg-gray-200"></span>
                 <div id="model-container" class="mt-2 grid grid-cols-3 rounded-lg shadow-md">
                 </div>
                 <div class="p-4 h-[5em] flex flex-row-reverse rounded-lg shadow-md">

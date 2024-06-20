@@ -1,6 +1,6 @@
 ﻿using System.Text.Json;
 
-namespace HomeChat.Backend;
+namespace HomeChat.Backend.Chats;
 
 public interface IChatResponseWriter
 {
@@ -20,7 +20,7 @@ public class ChatResponseWriter : IChatResponseWriter
         var newEvent =
             $"""
             event: aiMessage
-            data: {JsonSerializer.Serialize(new { newText = newText })}
+            data: {JsonSerializer.Serialize(new { newText })}
             """;
         await _httpContextAccessor.HttpContext!.Response.WriteAsync(newEvent);
         await _httpContextAccessor.HttpContext.Response.WriteAsync($"\n\n");

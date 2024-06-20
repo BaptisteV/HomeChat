@@ -41,7 +41,7 @@ public class PromptTests : IClassFixture<WebApplicationFactory<Program>>
         Assert.True(modelsResponse.IsSuccessStatusCode);
         var models = await modelsResponse.Content.ReadFromJsonAsync<List<ModelDescription>>();
         Assert.NotNull(models);
-        var newModel = models.FirstOrDefault(m => !m.IsSelected);
+        var newModel = models.Find(m => !m.IsSelected);
         Assert.NotNull(newModel);
 
         var setModelResponse = await _client.PostAsJsonAsync($"api/{sessionId}/Models", new ModelChange(newModel.ShortName));
@@ -62,7 +62,7 @@ public class PromptTests : IClassFixture<WebApplicationFactory<Program>>
             var models = await modelsResponse.Content.ReadFromJsonAsync<List<ModelDescription>>();
             Assert.NotNull(models);
 
-            var lightModels = models.OrderBy(m => m.SizeInMb).ToArray().Take(models.Count / 8).ToList();
+            var lightModels = models.OrderBy(m => m.SizeInMb).Take(models.Count / 8).ToList();
             var newModel = lightModels.ToArray()[Random.Shared.Next(0, lightModels.Count - 1)];
             Assert.NotNull(newModel);
 

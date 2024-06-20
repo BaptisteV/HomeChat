@@ -1,4 +1,4 @@
-﻿namespace HomeChat.Backend.Performances;
+﻿namespace HomeChat.Backend.Performances.Exceptions;
 
 public class NvApiException : Exception
 {

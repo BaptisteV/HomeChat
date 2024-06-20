@@ -3,4 +3,5 @@
 public interface IPerformanceMonitor
 {
     Task<PerformanceSummary> GetPerformanceSummaryAsync();
+    Task DeleteInactiveSessions();
 }

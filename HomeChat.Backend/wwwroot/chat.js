@@ -61,9 +61,7 @@ function createNewMessage(message, template) {
     const messageDiv = template.cloneNode(false);
     messageDiv.removeAttribute("id");
     messageDiv.classList.remove("hidden");
-    const messageContentElement = document.createElement("md-block");
-    messageContentElement.textContent = message;
-    messageDiv.appendChild(messageContentElement);
+    messageDiv.textContent = message;
 
     const chatContainer = document.getElementById("chat-container");
     chatContainer.appendChild(messageDiv);

@@ -1,4 +1,6 @@
-﻿using NvAPIWrapper.GPU;
+﻿using HomeChat.Backend.Chats;
+using HomeChat.Backend.Performances.Exceptions;
+using NvAPIWrapper.GPU;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 namespace HomeChat.Backend.Performances;
@@ -7,13 +9,14 @@ namespace HomeChat.Backend.Performances;
 public class PerformanceMonitor : IPerformanceMonitor
 {
     private readonly ILogger<PerformanceMonitor> _logger;
+    private readonly IChatSessionManager _chatSessionManager;
 
     [DllImport("kernel32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
-    static extern bool GlobalMemoryStatusEx(ref MEMORYSTATUSEX lpBuffer);
+    static extern bool GlobalMemoryStatusEx(ref MemoryStatusEx lpBuffer);
 
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
-    public struct MEMORYSTATUSEX
+    public struct MemoryStatusEx
     {
         public uint dwLength;
         public uint dwMemoryLoad;
@@ -25,9 +28,9 @@ public class PerformanceMonitor : IPerformanceMonitor
         public ulong ullAvailVirtual;
         public ulong ullAvailExtendedVirtual;
 
-        public MEMORYSTATUSEX()
+        public MemoryStatusEx()
         {
-            dwLength = (uint)Marshal.SizeOf(typeof(MEMORYSTATUSEX));
+            dwLength = (uint)Marshal.SizeOf(typeof(MemoryStatusEx));
             dwMemoryLoad = 0;
             ullTotalPhys = 0;
             ullAvailPhys = 0;
@@ -39,9 +42,10 @@ public class PerformanceMonitor : IPerformanceMonitor
         }
     }
 
-    public PerformanceMonitor(ILogger<PerformanceMonitor> logger)
+    public PerformanceMonitor(ILogger<PerformanceMonitor> logger, IChatSessionManager chatSessionManager)
     {
         _logger = logger;
+        _chatSessionManager = chatSessionManager;
     }
 
     public async Task<PerformanceSummary> GetPerformanceSummaryAsync()
@@ -88,7 +92,7 @@ public class PerformanceMonitor : IPerformanceMonitor
 
     private int GetRamUsage()
     {
-        var memStatus = new MEMORYSTATUSEX();
+        var memStatus = new MemoryStatusEx();
         if (!GlobalMemoryStatusEx(ref memStatus))
         {
             throw new UnauthorizedAccessException("Failed to get RAM usage.");
@@ -110,11 +114,21 @@ public class PerformanceMonitor : IPerformanceMonitor
         }
         else if (gpus.Length > 1)
         {
-            _logger.LogWarning($"Multiple GPUs found. Using the first GPU.");
+            _logger.LogWarning("Multiple GPUs found. Using the first GPU.");
         }
 
         var gpu = gpus[0]; // Assuming we are only interested in the first GPU
         return gpu.UsageInformation.GPU.Percentage;
     }
+
+    public async Task DeleteInactiveSessions()
+    {
+        var sessions = await _chatSessionManager.GetSessions();
+        var inactiveSessions = sessions.OrderBy(s => s.LastActivity)
+            .Take(sessions.Count() / 2)
+            .ToList();
+        inactiveSessions.ForEach(async s => await _chatSessionManager.DeleteSession(s.Id));
+    }
 }
+
 public record PerformanceSummary(int Cpu, int Gpu, int Ram);

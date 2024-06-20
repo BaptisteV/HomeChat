@@ -1,22 +1,28 @@
 using HomeChat.Backend;
 using HomeChat.Backend.AIModels;
+using HomeChat.Backend.Chats;
 using HomeChat.Backend.Performances;
-using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.HttpLogging;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Net.Http.Headers;
 using NReco.Logging.File;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddHttpLogging(o =>
 {
-    o.RequestHeaders.Add(HeaderNames.ContentType);
-    o.RequestHeaders.Add(HeaderNames.ContentEncoding);
-    o.RequestHeaders.Add(HeaderNames.ContentLength);
+    o.LoggingFields =
+    HttpLoggingFields.RequestPath
+    | HttpLoggingFields.RequestQuery
+    | HttpLoggingFields.RequestProtocol
+    | HttpLoggingFields.ResponseBody
+    | HttpLoggingFields.ResponseStatusCode;
+
     o.MediaTypeOptions.AddText("application/json");
     o.RequestBodyLogLimit = 4096;
     o.ResponseBodyLogLimit = 4096;
 });
+
+builder.Services.AddProblemDetails();
 
 var logFile = Path.Combine(Path.GetTempPath(), "HomeChat", $"{DateTime.Now:yyyyddMMHHmmssffftt}.log");
 Console.WriteLine($"Log file: {logFile}");
@@ -48,6 +54,7 @@ var app = builder.Build();
 app.UseStaticFiles();
 app.UseHttpsRedirection();
 app.UseHttpLogging();
+app.UseExceptionHandler();
 
 app.MapGet("/", HandleHome);
 app.MapGet("/Home", HandleHome);
@@ -59,84 +66,12 @@ async Task HandleHome(HttpContext httpContext)
     await httpContext.Response.WriteAsync(html);
 }
 
-app.MapDelete("/api/Sessions", async ([FromQuery] Guid sessionId, [FromServices] IChatSessionManager sessionManager) =>
-{
-    await sessionManager.DeleteSession(sessionId);
-});
-
-app.MapGet("/api/{sessionId:guid}/Prompt", HandlePrompt);
-
 app.MapGet("/api/PerformanceSummary", async ([FromServices] IPerformanceMonitor performanceMonitor)
     => await performanceMonitor.GetPerformanceSummaryAsync());
 
-app.MapPost("/api/{sessionId:guid}/Models",
-    async ([FromBody] ModelChange modelShortName,
-    HttpContext context,
-    [FromServices] IChatSessionManager sessionManager,
-    [FromServices] ILogger<Program> logger,
-    [FromRoute] Guid sessionId) =>
-{
-    var session = await sessionManager.GetOrSetSession(sessionId);
-    logger.LogInformation("Session Id: {SessionId} Remote IP: {RemoteIpAdress} New model short name: {NewModelShortName}", sessionId, context.Connection.RemoteIpAddress, modelShortName.NewModelShortName);
-    await session.SelectModel(modelShortName.NewModelShortName);
-    await session.LoadSelectedModel();
-});
+app.MapChatEndpoints();
+app.MapModelsEndpoints();
 
-app.MapGet("/api/{sessionId:guid}/Models",
-    async (HttpContext context,
-    [FromServices] IChatSessionManager sessionManager,
-    [FromRoute] Guid sessionId,
-    [FromServices] ILogger<Program> logger) =>
-{
-    var session = await sessionManager.GetOrSetSession(sessionId);
-    var models = await session.GetModels();
-    var selectedModel = models.Single(m => m.IsSelected);
-    logger.LogInformation("Session Id: {SessionId} Remote IP: {RemoteIpAdress} Retreived {ModelsCount}. Selected model : {SelectedModel}", sessionId, context.Connection.RemoteIpAddress, models.Count, selectedModel.ShortName);
-    return models;
-});
-
-app.MapGet("/api/{sessionId:guid}/Chats",
-    async (HttpContext context,
-    [FromServices] IChatSessionManager sessionManager,
-    [FromRoute] Guid sessionId,
-    [FromServices] ILogger<Program> logger) =>
-    {
-        logger.LogInformation("Session Id: {SessionId} Remote IP: {RemoteIpAdress}", sessionId, context.Connection.RemoteIpAddress);
-
-        var session = await sessionManager.GetOrSetSession(sessionId);
-        return session.GetConversation();
-    });
-
-
-async Task<EmptyHttpResult> HandlePrompt(
-    [FromQuery] string prompt,
-    [FromQuery] int maxTokens,
-    [FromServices] ILogger<Program> logger,
-    [FromServices] IChatResponseWriter chatResponseWriter,
-    [FromServices] IChatSessionManager sessionManager,
-    HttpContext context,
-    CancellationToken cancellationToken,
-    [FromRoute] Guid sessionId)
-{
-    logger.LogInformation("Session Id: {SessionId} Remote IP: {RemoteIpAdress} Prompt :{Prompt}", sessionId, context.Connection.RemoteIpAddress, prompt);
-    context.Response.Headers.Append("Content-Type", "text/event-stream");
-    var wholeResponse = "";
-    var session = await sessionManager.GetOrSetSession(sessionId);
-
-    await session.Process(prompt, maxTokens, onNewText: async (text) =>
-        {
-            if (string.IsNullOrEmpty(text))
-                return;
-            Console.Write(text);
-            wholeResponse += text;
-            await chatResponseWriter.WriteEvent(text);
-        }, cancellationToken);
-
-    logger.LogInformation("Session Id: {SessionId} Ai response: {Response}", sessionId, wholeResponse);
-    await chatResponseWriter.WriteEvent("");
-
-    return TypedResults.Empty;
-}
 await app.RunAsync();
 
 public partial class Program { protected Program() { } }

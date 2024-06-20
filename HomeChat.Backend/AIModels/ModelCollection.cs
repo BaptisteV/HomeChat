@@ -55,7 +55,7 @@ public class ModelCollection : IModelCollection
 
         if (_configuration.ApplyFilters)
         {
-            _models = _models.Where(m => _configuration.ModelFilenameFilters.Any(c => m.Filename.Contains(c, StringComparison.OrdinalIgnoreCase))).ToList();
+            _models = _models.Where(m => _configuration.ModelFilenameFilters.ToList().Exists(c => m.Filename.Contains(c, StringComparison.OrdinalIgnoreCase))).ToList();
 
             if (_models.Count == 0)
                 throw new FileNotFoundException($"No model found using filters: {string.Join(", ", _configuration.ModelFilenameFilters)}" +
