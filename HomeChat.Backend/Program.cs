@@ -42,10 +42,11 @@ builder.Services.AddLogging(builder
         )
 );
 
-builder.Services.AddTransient<IModelCollection, ModelCollection>();
 builder.Services.AddSingleton<IPerformanceMonitor, PerformanceMonitor>();
-builder.Services.AddSingleton<IChatSessionManager, ChatSessionManager>();
+builder.Services.AddHostedService<InactiveSessionCleanerService>();
 builder.Services.AddSingleton<IChat, Chat>();
+builder.Services.AddTransient<IModelCollection, ModelCollection>();
+builder.Services.AddSingleton<IChatSessionManager, ChatSessionManager>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IChatResponseWriter, ChatResponseWriter>();
 

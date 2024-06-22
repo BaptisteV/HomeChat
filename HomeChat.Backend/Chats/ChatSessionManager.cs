@@ -21,28 +21,45 @@ public class ChatSessionManager : IChatSessionManager
         return Task.CompletedTask;
     }
 
-    public async Task<IChat> GetOrSetSession(Guid sessionId)
+    private async Task SetSession(Guid sessionId)
     {
-        if (!_sessions.ContainsKey(sessionId))
-        {
-            var textProcessor = _serviceCollection.GetService<IChat>()!;
-            var selectedModel = (await textProcessor.GetModels()).First(m => m.IsSelected);
-            await textProcessor.LoadSelectedModel();
-            _logger.LogInformation("Starting new session {SessionId} with {SelectedModel}", sessionId, selectedModel.ShortName);
+        if (_sessions.ContainsKey(sessionId))
+            return;
 
-            _sessions.Add(
-                sessionId,
-                (sessionInfo: new SessionInfo
-                {
-                    Id = sessionId,
-                    CreatedAt = DateTime.Now,
-                    LastActivity = DateTime.Now
-                },
-                chat: textProcessor));
+        var chat = _serviceCollection.GetService<IChat>()!;
+        var selectedModel = (await chat.GetModels()).First(m => m.IsSelected);
+        await chat.LoadSelectedModel();
+        _logger.LogInformation("Starting new session {SessionId} with {SelectedModel}", sessionId, selectedModel.ShortName);
+
+        _sessions.Add(
+            sessionId,
+            (sessionInfo: new SessionInfo
+            {
+                Id = sessionId,
+                CreatedAt = DateTime.Now,
+                LastActivity = DateTime.Now,
+                Model = selectedModel,
+            },
+            chat));
+
+        var g = _sessions.Select(s => new { Id = s.Key, ModelName = s.Value.sessionInfo.Model.ShortName });
+        var groupedById = g.GroupBy(g => g.Id);
+        if (!groupedById.All(g => g.Count() == 1))
+        {
+            throw new Exception("!groupedById.All(g => g.Count() == 1)");
         }
+    }
+
+    private Task<IChat> GetSession(Guid sessionId)
+    {
         var (sessionInfo, chat) = _sessions[sessionId];
         sessionInfo.LastActivity = DateTime.Now;
-        return chat;
+        return Task.FromResult(chat);
+    }
+    public async Task<IChat> GetOrSetSession(Guid sessionId)
+    {
+        await SetSession(sessionId);
+        return await GetSession(sessionId);
     }
 
     public Task<IEnumerable<SessionInfo>> GetSessions()

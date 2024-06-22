@@ -23,16 +23,44 @@ public class Chat(IModelCollection _modelCollection, ILogger<Chat> _logger, IPer
     private LLamaContext _context;
     private ModelDescription _currentModel;
     private readonly IPerformanceMonitor _performanceMonitor = performanceMonitor;
+    public static bool IsFileReady(string filename)
+    {
+        // If the file can be opened for exclusive access it means that the file
+        // is no longer locked by another process.
+        try
+        {
+            using (FileStream inputStream = File.Open(filename, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                return inputStream.Length > 0;
+        }
+        catch (Exception)
+        {
+            return false;
+        }
+    }
+
+    public static async Task WaitForFile(string filename)
+    {
+        while (!IsFileReady(filename)) { await Task.Delay(100); }
+    }
+
+    public static async Task WaitWithTimeout(Task wait, string filename, TimeSpan timeout)
+    {
+        var timeoutTask = Task.Delay(10_000)!;
+        var firstTask = await Task.WhenAny(wait, timeoutTask);
+        if (firstTask == timeoutTask)
+        {
+            throw new FileLoadException("Timed out waiting for file to be accessible", filename);
+        }
+    }
+
 
     public async Task LoadSelectedModel()
     {
-        var rand = new Random();
-
         var modelToSet = await _modelCollection.GetSelectedModel();
         var parameters = new ModelParams(modelToSet.Filename)
         {
             ContextSize = 1024,
-            Seed = (uint)rand.Next(1 << 30) << 2 | (uint)rand.Next(1 << 2),
+            Seed = (uint)Random.Shared.Next(1 << 30) << 2 | (uint)Random.Shared.Next(1 << 2),
             GpuLayerCount = 35,
         };
 
@@ -41,14 +69,25 @@ public class Chat(IModelCollection _modelCollection, ILogger<Chat> _logger, IPer
             var selectedFilename = modelToSet.Filename;
             if (_model is null || (_currentModel.Filename != selectedFilename))
             {
+                await WaitWithTimeout(WaitForFile(modelToSet.Filename), modelToSet.Filename, TimeSpan.FromSeconds(20));
                 _model = await LLamaWeights.LoadFromFileAsync(parameters);
             }
+        }
+        catch (IOException ioException)
+        {
+            _logger.LogError(ioException, "{Model} already in use", Path.GetFileName(modelToSet.Filename));
+
+            await WaitWithTimeout(WaitForFile(modelToSet.Filename), modelToSet.Filename, TimeSpan.FromSeconds(20));
+            _model = await LLamaWeights.LoadFromFileAsync(parameters);
         }
         catch (LLama.Exceptions.LoadWeightsFailedException e)
         {
             _logger.LogError(e, "Probably lacking memory trying to load {Model}", Path.GetFileName(e.ModelPath));
             await _performanceMonitor.DeleteInactiveSessions();
-            throw;
+
+            await WaitWithTimeout(WaitForFile(modelToSet.Filename), modelToSet.Filename, TimeSpan.FromSeconds(20));
+            _model = await LLamaWeights.LoadFromFileAsync(parameters);
+            //throw;
         }
 
         // Initialize a chat session

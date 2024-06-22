@@ -16,19 +16,19 @@ public class PromptTests : IClassFixture<WebApplicationFactory<Program>>
         _client = _factory.CreateClient();
     }
 
-    private async Task<HttpResponseMessage> Prompt(string prompt)
+    private async Task<HttpResponseMessage> Prompt(string prompt, Guid sessionId)
     {
         var queryParams = new Dictionary<string, string?>();
         queryParams.Add("prompt", prompt);
         queryParams.Add("maxTokens", 5.ToString());
         var queryString = QueryString.Create(queryParams).Value;
-        return await _client.GetAsync($"api/{Guid.NewGuid()}/Prompt{queryString}");
+        return await _client.GetAsync($"api/{sessionId}/Prompt{queryString}");
     }
 
     [Fact]
     public async Task SimplePromptTest()
     {
-        var response = await Prompt("Hi! What is your name?");
+        var response = await Prompt("Hi! What is your name?", Guid.NewGuid());
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
@@ -47,7 +47,7 @@ public class PromptTests : IClassFixture<WebApplicationFactory<Program>>
         var setModelResponse = await _client.PostAsJsonAsync($"api/{sessionId}/Models", new ModelChange(newModel.ShortName));
         Assert.True(setModelResponse.IsSuccessStatusCode);
 
-        var response = await Prompt("Hi! How are you today?");
+        var response = await Prompt("Hi! How are you today?", sessionId);
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
@@ -79,7 +79,8 @@ public class PromptTests : IClassFixture<WebApplicationFactory<Program>>
     }
 
     [Fact(Skip = "Too long")]
-    public async Task PromptAllModel()
+    //[Fact]
+    public async Task PromptAllModels()
     {
         var sessionId = Guid.NewGuid();
 
@@ -89,11 +90,35 @@ public class PromptTests : IClassFixture<WebApplicationFactory<Program>>
         Assert.NotNull(models);
         foreach (var model in models)
         {
-
             var setModelResponse = await _client.PostAsJsonAsync($"api/{sessionId}/Models", new ModelChange(model.ShortName));
             Assert.True(setModelResponse.IsSuccessStatusCode);
-            var response = await Prompt("Hi! How are you today?");
+            var response = await Prompt("Hi! How are you today?", sessionId);
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         }
+    }
+    private async Task Prompt(ModelDescription model)
+    {
+        var sessionId = Guid.NewGuid();
+        var setModelResponse = await _client.PostAsJsonAsync($"api/{sessionId}/Models", new ModelChange(model.ShortName));
+        await setModelResponse.AssertNoProblemDetails();
+        Assert.True(setModelResponse.IsSuccessStatusCode);
+        var response = await Prompt("Hi! How are you today?", sessionId);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task PromptFiveModelsAtOnce()
+    {
+        var modelsResponse = await _client.GetAsync($"api/{Guid.NewGuid()}/Models");
+        Assert.True(modelsResponse.IsSuccessStatusCode);
+        var models = await modelsResponse.Content.ReadFromJsonAsync<List<ModelDescription>>();
+        Assert.NotNull(models);
+        var fiveModels = models.OrderBy(m => m.SizeInMb).Take(8).ToList();
+        var tasks = new List<Task>();
+        foreach (var model in fiveModels)
+        {
+            tasks.Add(Prompt(model));
+        }
+        await Task.WhenAll(tasks);
     }
 }

@@ -124,10 +124,21 @@ public class PerformanceMonitor : IPerformanceMonitor
     public async Task DeleteInactiveSessions()
     {
         var sessions = await _chatSessionManager.GetSessions();
-        var inactiveSessions = sessions.OrderBy(s => s.LastActivity)
-            .Take(sessions.Count() / 2)
+        if (sessions.Count() <= 1)
+        {
+            return;
+        }
+
+        var inactiveSessions = sessions
+            .OrderBy(s => s.LastActivity)
+            .Take(sessions.Count() / 4)
+            .OrderBy(s => s.Model.SizeInMb)
+            .Take(sessions.Count() / 4)
             .ToList();
-        inactiveSessions.ForEach(async s => await _chatSessionManager.DeleteSession(s.Id));
+
+        var deleteTasks = inactiveSessions.Select(s => _chatSessionManager.DeleteSession(s.Id));
+        await Task.WhenAll(deleteTasks);
+        _logger.LogInformation("{InactiveSessionsCount} sessions deleted", inactiveSessions.Count);
     }
 }
 
