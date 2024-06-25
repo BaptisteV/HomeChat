@@ -2,6 +2,9 @@
 
 public interface IPerformanceMonitor
 {
-    Task<PerformanceSummary> GetPerformanceSummaryAsync();
+    PerformanceSummary GetPerformanceSummary();
     Task DeleteInactiveSessions();
+    Task DeleteSessionForRam(long freeRamTargetInMb);
+
+    Task DeleteMostInactiveSession();
 }

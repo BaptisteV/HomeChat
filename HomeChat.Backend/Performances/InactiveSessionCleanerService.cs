@@ -1,29 +1,19 @@
-﻿using HomeChat.Backend.Chats;
+﻿namespace HomeChat.Backend.Performances;
 
-namespace HomeChat.Backend.Performances;
-
-public class InactiveSessionCleanerService : BackgroundService
+public class InactiveSessionCleanerService(IPerformanceMonitor _performanceMonitor, ILogger<InactiveSessionCleanerService> _logger) : BackgroundService
 {
     private readonly TimeSpan _interval = TimeSpan.FromMilliseconds(500);
-    private readonly IPerformanceMonitor _performanceMonitor;
-    private readonly IChatSessionManager _chatSessionManager;
 
-    public InactiveSessionCleanerService(IPerformanceMonitor performanceMonitor, IChatSessionManager chatSessionManager)
-    {
-        _performanceMonitor = performanceMonitor;
-        _chatSessionManager = chatSessionManager;
-    }
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         using PeriodicTimer timer = new(_interval);
         while (await timer.WaitForNextTickAsync(stoppingToken) && !stoppingToken.IsCancellationRequested)
         {
-            var sessionCount = (await _chatSessionManager.GetSessions()).Count();
-
-            var perf = await _performanceMonitor.GetPerformanceSummaryAsync();
-            if (perf.Ram > 75)
+            var perf = _performanceMonitor.GetPerformanceSummary();
+            if (perf.Ram.PercentUsed >= 95)
             {
-                await _performanceMonitor.DeleteInactiveSessions();
+                _logger.LogWarning("{Source} trigged because RAM usage is {RamPercentUsed}%", nameof(InactiveSessionCleanerService), perf.Ram.PercentUsed);
+                await _performanceMonitor.DeleteMostInactiveSession();
             }
         }
     }

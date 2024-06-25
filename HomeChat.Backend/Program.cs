@@ -34,10 +34,7 @@ builder.Services.AddLogging(builder
             {
                 o.Append = true;
                 o.MinLevel = LogLevel.Debug;
-                o.HandleFileError = (err) =>
-                {
-                    err.UseNewLogFileName($"{Path.GetFileNameWithoutExtension(err.LogFileName)}_alt{Random.Shared.Next()}{Path.GetExtension(err.LogFileName)}");
-                };
+                o.HandleFileError = (err) => err.UseNewLogFileName($"{Path.GetFileNameWithoutExtension(err.LogFileName)}_alt{Random.Shared.Next()}{Path.GetExtension(err.LogFileName)}");
             }
         )
 );
@@ -56,6 +53,7 @@ app.UseStaticFiles();
 app.UseHttpsRedirection();
 app.UseHttpLogging();
 app.UseExceptionHandler();
+app.UseDeveloperExceptionPage();
 
 app.MapGet("/", HandleHome);
 app.MapGet("/Home", HandleHome);
@@ -67,8 +65,8 @@ async Task HandleHome(HttpContext httpContext)
     await httpContext.Response.WriteAsync(html);
 }
 
-app.MapGet("/api/PerformanceSummary", async ([FromServices] IPerformanceMonitor performanceMonitor)
-    => await performanceMonitor.GetPerformanceSummaryAsync());
+app.MapGet("/api/PerformanceSummary", ([FromServices] IPerformanceMonitor performanceMonitor)
+    => performanceMonitor.GetPerformanceSummary());
 
 app.MapChatEndpoints();
 app.MapModelsEndpoints();

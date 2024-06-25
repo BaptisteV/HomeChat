@@ -41,13 +41,6 @@ public class ChatSessionManager : IChatSessionManager
                 Model = selectedModel,
             },
             chat));
-
-        var g = _sessions.Select(s => new { Id = s.Key, ModelName = s.Value.sessionInfo.Model.ShortName });
-        var groupedById = g.GroupBy(g => g.Id);
-        if (!groupedById.All(g => g.Count() == 1))
-        {
-            throw new Exception("!groupedById.All(g => g.Count() == 1)");
-        }
     }
 
     private Task<IChat> GetSession(Guid sessionId)

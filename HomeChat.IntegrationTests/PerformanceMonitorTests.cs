@@ -20,8 +20,10 @@ public class PerformanceMonitorTests : IClassFixture<WebApplicationFactory<Progr
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var result = await response.Content.ReadFromJsonAsync<PerformanceSummary>();
         Assert.NotNull(result);
-        Assert.InRange(result.Gpu, 0, 100);
-        Assert.InRange(result.Cpu, 0, 100);
-        Assert.True(result.Ram > 0);
+        Assert.InRange(result.Gpu.PercentUsed, 0, 100);
+        Assert.InRange(result.Cpu.PercentUsed, 0, 100);
+        Assert.True(result.Ram.PercentUsed > 0);
+        Assert.True(result.Ram.Available > 0);
+        Assert.True(result.Ram.Free > 0);
     }
 }

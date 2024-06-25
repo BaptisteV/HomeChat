@@ -14,8 +14,15 @@ public static class HttpResponseMessageExtensions
         }
         if (!message.IsSuccessStatusCode)
         {
-            var problemDetails = JsonSerializer.Deserialize<ProblemDetails>(content)!;
-            Assert.Fail($"{problemDetails.Status} {problemDetails.Title} {problemDetails.Detail}");
+            var problemDetails = JsonSerializer.Deserialize<ProblemDetails>(content);
+            if (problemDetails is null)
+            {
+                Assert.Fail($"{message.StatusCode} {message.RequestMessage?.Method} ({message.RequestMessage?.RequestUri}) {content}");
+            }
+            else
+            {
+                Assert.Fail($"{problemDetails.Status} {problemDetails.Title} {problemDetails.Detail}");
+            }
         }
     }
 }

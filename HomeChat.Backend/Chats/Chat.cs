@@ -23,40 +23,52 @@ public class Chat(IModelCollection _modelCollection, ILogger<Chat> _logger, IPer
     private LLamaContext _context;
     private ModelDescription _currentModel;
     private readonly IPerformanceMonitor _performanceMonitor = performanceMonitor;
-    public static bool IsFileReady(string filename)
+    public bool IsFileReady(string filename)
     {
         // If the file can be opened for exclusive access it means that the file
         // is no longer locked by another process.
         try
         {
-            using (FileStream inputStream = File.Open(filename, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
-                return inputStream.Length > 0;
+            using FileStream inputStream = File.Open(filename, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+            return inputStream.Length > 0;
         }
-        catch (Exception)
+        catch (Exception e)
         {
+            _logger.LogError(e, "Error checking if {Filename} is readable", filename);
             return false;
         }
     }
 
-    public static async Task WaitForFile(string filename)
+    public async Task WaitForFile(string filename)
     {
         while (!IsFileReady(filename)) { await Task.Delay(100); }
     }
 
     public static async Task WaitWithTimeout(Task wait, string filename, TimeSpan timeout)
     {
-        var timeoutTask = Task.Delay(10_000)!;
+        var timeoutTask = Task.Delay(2_000)!;
         var firstTask = await Task.WhenAny(wait, timeoutTask);
+        if (!firstTask.IsCompletedSuccessfully)
+            throw new FileLoadException("Error readonly file", filename, firstTask.Exception);
         if (firstTask == timeoutTask)
-        {
-            throw new FileLoadException("Timed out waiting for file to be accessible", filename);
-        }
+            throw new FileLoadException("Timed out waiting for file to be readable", filename);
     }
 
+    private async Task SafeLoadModel(ModelDescription modelToSet, ModelParams parameters)
+    {
+        if (modelToSet.Filename == Path.GetFileName(parameters.ModelPath))
+            return;
+        await WaitWithTimeout(WaitForFile(modelToSet.Filename), modelToSet.Filename, TimeSpan.FromSeconds(20));
+        var currentPerf = _performanceMonitor.GetPerformanceSummary();
+        if (currentPerf.Ram.Available < modelToSet.SizeInMb)
+            await _performanceMonitor.DeleteSessionForRam(modelToSet.SizeInMb);
+        _model = await LLamaWeights.LoadFromFileAsync(parameters);
+    }
 
     public async Task LoadSelectedModel()
     {
         var modelToSet = await _modelCollection.GetSelectedModel();
+
         var parameters = new ModelParams(modelToSet.Filename)
         {
             ContextSize = 1024,
@@ -69,29 +81,22 @@ public class Chat(IModelCollection _modelCollection, ILogger<Chat> _logger, IPer
             var selectedFilename = modelToSet.Filename;
             if (_model is null || (_currentModel.Filename != selectedFilename))
             {
-                await WaitWithTimeout(WaitForFile(modelToSet.Filename), modelToSet.Filename, TimeSpan.FromSeconds(20));
-                _model = await LLamaWeights.LoadFromFileAsync(parameters);
+                await SafeLoadModel(modelToSet, parameters);
             }
         }
         catch (IOException ioException)
         {
             _logger.LogError(ioException, "{Model} already in use", Path.GetFileName(modelToSet.Filename));
-
-            await WaitWithTimeout(WaitForFile(modelToSet.Filename), modelToSet.Filename, TimeSpan.FromSeconds(20));
-            _model = await LLamaWeights.LoadFromFileAsync(parameters);
+            await SafeLoadModel(modelToSet, parameters);
         }
         catch (LLama.Exceptions.LoadWeightsFailedException e)
         {
             _logger.LogError(e, "Probably lacking memory trying to load {Model}", Path.GetFileName(e.ModelPath));
-            await _performanceMonitor.DeleteInactiveSessions();
-
-            await WaitWithTimeout(WaitForFile(modelToSet.Filename), modelToSet.Filename, TimeSpan.FromSeconds(20));
-            _model = await LLamaWeights.LoadFromFileAsync(parameters);
-            //throw;
+            await SafeLoadModel(modelToSet, parameters);
         }
 
         // Initialize a chat session
-        _context = _model.CreateContext(parameters);
+        _context = _model!.CreateContext(parameters);
         var executor = new InteractiveExecutor(_context);
         _chatSession = new ChatSession(executor);
 
@@ -123,7 +128,7 @@ public class Chat(IModelCollection _modelCollection, ILogger<Chat> _logger, IPer
         {
             if (cancellationToken.IsCancellationRequested)
             {
-                _logger.LogInformation("{Process} stopped. Cancellation was requested", nameof(Process));
+                _logger.LogWarning("{Process} stopped. Cancellation was requested", nameof(Process));
                 return;
             }
 
