@@ -6,11 +6,12 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-    <link rel="icon" type="image/svg" href="robot.svg" />
+    <link rel="icon" type="image/svg" href="resources/robot.svg" />
     <link rel="stylesheet" href="style.css" />
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.canvasjs.com/ga/canvasjs.min.js"></script>
     <script type="module" src="https://unpkg.com/@material-tailwind/html@latest/scripts/popover.js"></script>
-
+    <script type="module" src="./performance.js" defer></script>
     <script type="module" src="./audioEffects.js" defer></script>
     <script type="module" src="./session.js" defer></script>
     <script type="module" src="./promptHistory.js" defer></script>
@@ -24,29 +25,27 @@
 </head>
 
     <body>
-        <div class="bg-gray-100 bg-transparent flex h-screen flex-col sm:flex-row">
-            <!-- Menu -->
-            <div class="flex w-64 grow flex-col border-r px-4 pt-2">
+        <div class="bg-gray-100 bg-transparent flex h-screen w-screen flex-col lg:flex-row justify-center">
+            <!-- Left panel -->
+            <div class="flex grow flex-col min-w-96 p-4">
                 <h2 class="text-center text-2xl font-semibold text-gray-800">HomeChat</h2>
-                <div class="flex items-center justify-center rounded border-2 border-gray-200">
-                    <img class="h-24 w-24" src="robot.svg" />
+                <img class="m-auto object-fill h-24 w-24" src="resources/robot.svg" />
+                <div id="history-container" class="m-0.5 min-h-[2em] collapse rounded-md border-2">
                 </div>
-                <div class="flex flex-col grow">
-                    <div id="history-container" class="h-full rounded-md border-2">
+                <span id="history-template" class="m-0.5 hidden overflow-hidden text-balance rounded-md border-2 border-r border-blue-100 px-0.5 text-sm hover:bg-gray-200 hover:shadow-md"></span>
 
-                    </div>
-                    <span id="history-template" class="m-0.5 hidden overflow-hidden text-balance rounded-md border-2 border-r border-blue-100 px-0.5 text-sm hover:bg-gray-200 hover:shadow-md"></span>
-                    <div class="h-64 my-2 flex items-center rounded-md border-2 px-2 py-2 text-gray-600 hover:bg-gray-200">
-
-                    </div>
+                <div id="line-chart" class="w-[100%] h-[100%] m-0.5 rounded-md border-2">
+                </div>
+                <div id="perf-chart" class="w-[100%] h-[100%] m-0.5 rounded-md border-2 cursor-pointer">
                 </div>
             </div>
-            <div class="mx-8 my-4 flex grow flex-col justify-items-center lg:mx-32 xl:mx-72">
+            <!-- Right panel -->
+            <div class="flex grow flex-col justify-items-center sm:mx-0 md:mx-2 lg:mx-12 xl:mx-32 border-2 border-purple-500">
                 <!-- Models -->
-                <span id="modelTemplate" class="model m-0.5 px-0.5 border-gray-200 hidden overflow-hidden text-balance rounded-md border-2 border-r text-sm hover:shadow-md hover:bg-gray-200"></span>
-                <div id="model-container" class="mt-2 grid grid-cols-3 rounded-lg shadow-md">
+                <span id="modelTemplate" class="model m-0.5 px-0.5 border-gray-200 hidden overflow-hidden text-nobreak rounded-md border-2 border-r text-sm hover:shadow-md hover:bg-gray-200"></span>
+                <div id="model-container" class="m-0.5 rounded-lg shadow-md">
                 </div>
-                <div class="p-4 h-[5em] flex flex-row-reverse rounded-lg shadow-md">
+                <div class="m-0.5 p-4 h-[5em] flex flex-row-reverse rounded-lg shadow-md">
                     <button id="mute-button" class="bg-gray-200 m-2 px-[1em] rounded-lg text-center font-medium transition-all hover:bg-gray-500 hover:shadow-lg disabled:pointer-events-none disabled:opacity-50 disabled:shadow-none">
                         Mute
                     </button>
@@ -102,7 +101,7 @@
                         </div>
                     </div>
                 </div>
-                <div id="spinner" class="self-center hidden p-2 transition-all">
+                <div id="spinner" class="self-center hidden p-2 transition-all m-0.5">
                     <div class="">
                         <svg class="w-8s h-8 text-gray-200 animate-spin self-center" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" width="28" height="28">
                             <path d="M32 3C35.8083 3 39.5794 3.75011 43.0978 5.20749C46.6163 6.66488 49.8132 8.80101 52.5061 11.4939C55.199 14.1868 57.3351 17.3837 58.7925 20.9022C60.2499 24.4206 61 28.1917 61 32C61 35.8083 60.2499 39.5794 58.7925 43.0978C57.3351 46.6163 55.199 49.8132 52.5061 52.5061C49.8132 55.199 46.6163 57.3351 43.0978 58.7925C39.5794 60.2499 35.8083 61 32 61C28.1917 61 24.4206 60.2499 20.9022 58.7925C17.3837 57.3351 14.1868 55.199 11.4939 52.5061C8.801 49.8132 6.66487 46.6163 5.20749 43.0978C3.7501 39.5794 3 35.8083 3 32C3 28.1917 3.75011 24.4206 5.2075 20.9022C6.66489 17.3837 8.80101 14.1868 11.4939 11.4939C14.1868 8.80099 17.3838 6.66487 20.9022 5.20749C24.4206 3.7501 28.1917 3 32 3L32 3Z"

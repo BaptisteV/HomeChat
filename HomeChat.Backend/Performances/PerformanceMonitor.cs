@@ -1,5 +1,4 @@
-﻿using HomeChat.Backend.Chats;
-using HomeChat.Backend.Performances.Exceptions;
+﻿using HomeChat.Backend.Performances.Exceptions;
 using NvAPIWrapper.GPU;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
@@ -9,7 +8,8 @@ namespace HomeChat.Backend.Performances;
 public partial class PerformanceMonitor : IPerformanceMonitor
 {
     private readonly ILogger<PerformanceMonitor> _logger;
-    private readonly IChatSessionManager _chatSessionManager;
+    private readonly PerformanceCounter _cpuCounter;
+    private readonly PhysicalGPU _gpu;
 
     [LibraryImport("kernel32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
@@ -42,10 +42,21 @@ public partial class PerformanceMonitor : IPerformanceMonitor
         }
     }
 
-    public PerformanceMonitor(ILogger<PerformanceMonitor> logger, IChatSessionManager chatSessionManager)
+    public PerformanceMonitor(ILogger<PerformanceMonitor> logger)
     {
         _logger = logger;
-        _chatSessionManager = chatSessionManager;
+        _cpuCounter = new PerformanceCounter("Processor", "% Processor Time", "_Total");
+        var gpus = PhysicalGPU.GetPhysicalGPUs();
+        if (gpus.Length == 0)
+        {
+            _logger.LogWarning("No GPUs found.");
+        }
+        else if (gpus.Length > 1)
+        {
+            _logger.LogWarning("Multiple GPUs found. Using the first GPU.");
+        }
+        _gpu = gpus[0];
+        _cpuCounter = new PerformanceCounter("Processor", "% Processor Time", "_Total");
     }
 
     public PerformanceSummary GetPerformanceSummary()
@@ -85,8 +96,15 @@ public partial class PerformanceMonitor : IPerformanceMonitor
 
     private CpuUsage GetCpuUsage()
     {
-        var cpuCounter = new PerformanceCounter("Processor", "% Processor Time", "_Total");
-        return new CpuUsage() { PercentUsed = (int)cpuCounter.NextValue() };
+        var percent = _cpuCounter.NextValue();
+        int maxTries = 10;
+        while (percent <= 0 || percent >= 100 && maxTries > 0)
+        {
+            percent = _cpuCounter.NextValue();
+            maxTries--;
+        }
+
+        return new CpuUsage() { PercentUsed = (int)percent };
     }
 
     private RamUsagee GetRamUsage()
@@ -105,78 +123,6 @@ public partial class PerformanceMonitor : IPerformanceMonitor
 
     private GpuUsage GetGpuUsage()
     {
-        var gpus = PhysicalGPU.GetPhysicalGPUs();
-        if (gpus.Length == 0)
-        {
-            _logger.LogWarning("No GPUs found.");
-            return new GpuUsage();
-        }
-        else if (gpus.Length > 1)
-        {
-            _logger.LogWarning("Multiple GPUs found. Using the first GPU.");
-        }
-
-        var gpu = gpus[0]; // Assuming we are only interested in the first GPU
-        return new GpuUsage() { PercentUsed = gpu.UsageInformation.GPU.Percentage };
-    }
-
-    private async Task DeleteIncativeSessionsUntil(Func<bool> until)
-    {
-        const int MAX_RETRIES = 10;
-        int retries = 0;
-        do
-        {
-            await DeleteInactiveSessions();
-            retries++;
-        }
-        while (until() && retries <= MAX_RETRIES);
-    }
-
-    public async Task DeleteSessionForRam(long freeRamTargetInMb)
-    {
-        await DeleteIncativeSessionsUntil(() =>
-        {
-            var ramUsage = GetRamUsage();
-            return ramUsage.Free > freeRamTargetInMb;
-        });
-    }
-
-    public List<SessionInfo> InactiveSessions(IEnumerable<SessionInfo> sessions)
-    {
-        var biggest = sessions
-            .OrderBy(s => s.Model.SizeInMb)
-            .Take(Math.Max(sessions.Count() / 4, 1));
-        return biggest
-            .OrderBy(s => s.LastActivity)
-            .Take(Math.Max(biggest.Count() / 4, 1))
-            .ToList();
-    }
-
-
-    public async Task DeleteMostInactiveSession()
-    {
-        var sessions = await _chatSessionManager.GetSessions();
-        if (sessions.Count() <= 1)
-        {
-            return;
-        }
-
-        var mostInactiveSession = InactiveSessions(sessions)[0];
-        await _chatSessionManager.DeleteSession(mostInactiveSession.Id);
-    }
-
-    public async Task DeleteInactiveSessions()
-    {
-        var sessions = await _chatSessionManager.GetSessions();
-        if (sessions.Count() <= 1)
-        {
-            return;
-        }
-
-        var inactiveSessions = InactiveSessions(sessions);
-
-        var deleteTasks = inactiveSessions.Select(s => _chatSessionManager.DeleteSession(s.Id));
-        await Task.WhenAll(deleteTasks);
-        _logger.LogInformation("{InactiveSessionsCount} sessions deleted", inactiveSessions.Count);
+        return new GpuUsage() { PercentUsed = _gpu.UsageInformation.GPU.Percentage };
     }
 }

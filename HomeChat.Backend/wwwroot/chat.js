@@ -12,7 +12,7 @@ function initEventSource(prompt, maxTokens) {
     });
 
     eventSource.onerror = (e) => {
-        console.error(e);
+        console.error("Error in chat eventSource", e);
     };
     return eventSource;
 }

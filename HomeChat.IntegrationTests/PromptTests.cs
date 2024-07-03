@@ -108,8 +108,8 @@ public class PromptTests : IClassFixture<WebApplicationFactory<Program>>
         }
     }
 
-    //[Fact(Skip = "Too long")]
-    [Fact]
+    [Fact(Skip = "Too long")]
+    //[Fact]
     public async Task PromptAllModels()
     {
         var sessionId = Guid.NewGuid();

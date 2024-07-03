@@ -55,10 +55,13 @@
   <Content Update="wwwroot\httpClient.js">
     <CopyToOutputDirectory>Always</CopyToOutputDirectory>
   </Content>
-  <Content Update="wwwroot\speak.js">
-    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+  <Content Update="wwwroot\resources\chatding.mp3">
+    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
   </Content>
-  <Content Update="wwwroot\style.css">
+  <Content Update="wwwroot\resources\robot.svg">
+    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+  </Content>
+  <Content Update="wwwroot\speak.js">
     <CopyToOutputDirectory>Always</CopyToOutputDirectory>
   </Content>
   </ItemGroup>

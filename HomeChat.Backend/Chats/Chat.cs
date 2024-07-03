@@ -16,13 +16,12 @@ public interface IChat : IAsyncDisposable
     Task<(string modelShortName, string[] conversation)> GetConversation();
 }
 
-public class Chat(IModelCollection _modelCollection, ILogger<Chat> _logger, IPerformanceMonitor performanceMonitor) : IChat
+public class Chat(IModelCollection _modelCollection, ILogger<Chat> _logger, IPerformanceMonitor _performanceMonitor, ISessionCleanerService _sessionCleanerService) : IChat
 {
     private LLamaWeights _model;
     private ChatSession _chatSession;
     private LLamaContext _context;
     private ModelDescription _currentModel;
-    private readonly IPerformanceMonitor _performanceMonitor = performanceMonitor;
     public bool IsFileReady(string filename)
     {
         // If the file can be opened for exclusive access it means that the file
@@ -61,7 +60,7 @@ public class Chat(IModelCollection _modelCollection, ILogger<Chat> _logger, IPer
         await WaitWithTimeout(WaitForFile(modelToSet.Filename), modelToSet.Filename, TimeSpan.FromSeconds(20));
         var currentPerf = _performanceMonitor.GetPerformanceSummary();
         if (currentPerf.Ram.Available < modelToSet.SizeInMb)
-            await _performanceMonitor.DeleteSessionForRam(modelToSet.SizeInMb);
+            await _sessionCleanerService.DeleteSessionForRam(modelToSet.SizeInMb);
         _model = await LLamaWeights.LoadFromFileAsync(parameters);
     }
 

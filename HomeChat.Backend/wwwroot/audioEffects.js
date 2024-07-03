@@ -1,10 +1,12 @@
 ﻿const promptButton = document.getElementById("prompt-button");
 
 promptButton.addEventListener("click", () => {
-    let ding = new Audio("./chatding.mp3");
+    let ding = new Audio("./resources/chatding.mp3");
     ding.volume = 0.1;
     ding.play()
 }, false);
+
+// TODO Check for notes correctness
 function getPentatonicNoteFrequency(char) {
     const scaleNotes = [
         { note: 'A3', frequency: 220 },
@@ -38,7 +40,6 @@ function playNoteFromChar(inputChar) {
     const attackTime = totalDuration * 0.1; // 10% of total duration
     const decayTime = totalDuration * 0.2; // 20% of total duration
     const sustainTime = totalDuration * 0.5; // 50% of total duration
-    const releaseTime = totalDuration * 0.2; // 20% of total duration
 
     const master = 0.01;
     const sustainLevel = 0.8 * master;

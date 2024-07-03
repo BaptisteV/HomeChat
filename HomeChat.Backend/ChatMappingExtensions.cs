@@ -37,11 +37,11 @@ public static class ChatMappingExtensions
                 return;
             Console.Write(text);
             wholeResponse += text;
-            await chatResponseWriter.WriteEvent(text);
+            await chatResponseWriter.Write(text);
         }, cancellationToken);
 
         logger.LogInformation("Session Id: {SessionId} Ai response: {Response}", sessionId, wholeResponse);
-        await chatResponseWriter.WriteEvent("");
+        await chatResponseWriter.Write("");
 
         return TypedResults.Empty;
     }
